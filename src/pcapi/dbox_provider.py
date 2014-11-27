@@ -201,7 +201,7 @@ class DropboxProvider(object):
 
             metadata = self.api_client.put_file(name, fp, overwrite)
         except rest.ErrorResponse as e:
-            if e.status == 507:
+            if e.status == 503:
                 upload_file = lambda: self.upload(name, fp, overwrite)
                 metadata = self.__retry(e, upload_file)
             else:
@@ -226,7 +226,7 @@ class DropboxProvider(object):
             metadata = self.api_client.file_create_folder(path)
         except rest.ErrorResponse as e:
             log.debug(e.status)
-            if e.status == 507:
+            if e.status == 503:
                 create_dir = lambda: self.mkdir(path)
                 metadata = self.__retry(e, create_dir)
             elif e.status == 403:
