@@ -24,7 +24,7 @@ sys.path.append(os.path.join(pwd,'../'))
 sys.path.append(pwd)
 
 from pcapi import config
-import pcapi_routes
+import pcapi.routes
 import bottle
 
 ##################################################
