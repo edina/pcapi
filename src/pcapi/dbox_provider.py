@@ -10,6 +10,7 @@ from urlparse import urlsplit, urlunsplit
 APP_KEY = config.get("dropbox","app_key")
 APP_SECRET = config.get("dropbox","app_secret")
 ACCESS_TYPE = 'app_folder'  # should be 'dropbox' or 'app_folder' as configured for your app
+MAX_TIME_RETRY = 10000  # Maximum time for a retry if bigger pass the error to the user
 
 STATE_CODES = {
     "verify_token": 0,
@@ -95,6 +96,30 @@ class DropboxProvider(object):
                 "state" : STATE_CODES["verify_token"]
             }
 
+
+    def __retry(self, httperror, func):
+        """ Extract the Retry-After time from the headers and invoke the
+            function again if the time is less than MAX_TIME_RETRY if not
+            it raises the exception
+            Args:
+                e rest.ErrorResponse
+                func function to retry
+                *args arguments of the function
+            Raises:
+                e the original rest.ErrorResponse
+
+        """
+        headers = dict(httperror.headers)
+        header = headers.get('Retry-After')
+        if(header is not None):
+            retry_after = int(header)
+            log.debug('Retrying after {0} ms'.format(retry_after))
+            if retry_after < MAX_TIME_RETRY:
+                time.sleep(retry_after)
+                return func()
+
+        # Could't retry bubble the exception
+        raise httperror
 
     def login(self, req_key=None, callback=None, async=False):
         """ Create a URL which the browser can use to verify a token and redirect to webapp.
@@ -193,8 +218,18 @@ class DropboxProvider(object):
             rest.ErrorResponse
         """
         log.debug("uploading file: " + name)
+
         #log.debug("with tokens: " + logtool.pp(tokens.dump_tokens()) )
-        metadata = self.api_client.put_file(name, fp, overwrite )
+        try:
+
+            metadata = self.api_client.put_file(name, fp, overwrite)
+        except rest.ErrorResponse as e:
+            if e.status == 507:
+                upload_file = lambda: self.upload(name, fp, overwrite)
+                metadata = self.__retry(e, upload_file)
+            else:
+                raise e
+
         try:
             fp.close()
         except Exception as e:
@@ -212,14 +247,12 @@ class DropboxProvider(object):
         """
         try:
             metadata = self.api_client.file_create_folder(path)
-            return Metadata(metadata)
         except rest.ErrorResponse as e:
             log.debug(e.status)
-            if e.status == 503:
-                log.debug(e.headers)
-                time.sleep(1)
-                self.mkdir(path)
-            if e.status == 403:
+            if e.status == 507:
+                create_dir = lambda: self.mkdir(path)
+                metadata = self.__retry(e, create_dir)
+            elif e.status == 403:
                 # File already exists. Find the next filename (XXX) available
                 # by calling this function recursively. (Can be much faster
                 # by first checking the results of ls before doing the recursion)
@@ -233,6 +266,7 @@ class DropboxProvider(object):
                 return self.mkdir(newpath)
             else:
                 raise e
+        return Metadata(metadata)
 
     def move(self, path1, path2):
         """ Wrapper call around create_folder. Returns metadata.
