@@ -103,11 +103,10 @@ class DropboxProvider(object):
             function again if the time is less than MAX_TIME_RETRY if not
             it raises the exception
             Args:
-                e rest.ErrorResponse
+                httperror rest.ErrorResponse
                 func function to retry
-                *args arguments of the function
             Raises:
-                e the original rest.ErrorResponse
+                httperror the original rest.ErrorResponse
 
         """
         headers = dict(httperror.headers)
