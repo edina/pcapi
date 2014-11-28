@@ -5,12 +5,13 @@ from pcapi.db import tokens
 from dropbox import client, session, rest
 from db import tokens
 from urlparse import urlsplit, urlunsplit
+from datetime import datetime
 
 ### Static Variables ###
 APP_KEY = config.get("dropbox","app_key")
 APP_SECRET = config.get("dropbox","app_secret")
 ACCESS_TYPE = 'app_folder'  # should be 'dropbox' or 'app_folder' as configured for your app
-MAX_TIME_RETRY = 10000  # Maximum time for a retry if bigger pass the error to the user
+MAX_TIME_RETRY = 10  # Maximum time in seconds for a internal retry
 
 STATE_CODES = {
     "verify_token": 0,
@@ -112,10 +113,21 @@ class DropboxProvider(object):
         headers = dict(httperror.headers)
         header = headers.get('Retry-After')
         if(header is not None):
-            retry_after = int(header)
-            log.debug('Retrying after {0} ms'.format(retry_after))
-            if retry_after < MAX_TIME_RETRY:
-                time.sleep(retry_after)
+            if header.isdigit():
+                delta = int(header)
+            else:
+                try:
+                    retry_after = datetime.strptime(header, '%a, %d %b %Y %H:%M:%S %Z')
+                    delta_dt = retry_after - datetime.now()
+                    delta = delta_dt.seconds
+                except ValueError:
+                    raise httperror
+
+            log.debug('Retry-After: {0}'.format(header))
+            log.debug('Suggested retry time: {0} seconds'.format(delta))
+            if delta < MAX_TIME_RETRY:
+                log.debug('Retrying after {0} seconds'.format(delta))
+                time.sleep(delta)
                 return func()
 
         # Could't retry bubble the exception
