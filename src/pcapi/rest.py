@@ -918,10 +918,12 @@ class PCAPIRest(object):
                 for key, r in x.content.iteritems():
                     for field in r["properties"]["fields"]:
                         if self.check_extension(exts, field["val"]):
-                            buf, meta = self.provider.get_file_and_metadata(os.path.join("records", key, field["val"]))
-                            f = open(os.path.join(dirpath, field["val"]), "w")
-                            f.write(buf.read())
-                            f.close()
+                            with open(os.path.join(dirpath, field["val"]), "w") as f:
+                                try:
+                                    buf, meta = self.provider.get_file_and_metadata(os.path.join("records", key, field["val"]))
+                                    f.write(buf.read())
+                                except Exception as ex:
+                                    log.debug('Skipping: {0} error: {1}'.format(field["val"], str(ex)))
             tname = "%s.zip" % uuid.uuid4()
             log.debug(tname)
             #if os.path.isfile("myzipfile.zip"):
