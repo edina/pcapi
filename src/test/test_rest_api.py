@@ -54,9 +54,9 @@ def _verify_token():
     generate a new one.
     """
     global userid
-    tokenfile = os.sep.join((config.get('test', 'test_resources'), 'token.txt'))
+    tokenfile = os.path.join(config.get('test', 'test_resources'), 'token.txt')
 
-    with open(tokenfile, 'w+') as f:
+    with open(tokenfile, 'r') as f:
         token = f.read()
 
     if len(token) > 0:
@@ -316,6 +316,26 @@ class TestDropboxRecords(unittest.TestCase):
         self.assertEquals(resp["error"], 0)
         resp = app.get('/records/dropbox/%s/' % userid, params={ "filter":"media","mediatype": "images"}).json
         self.assertEquals(resp["error"], 0)
+
+    def test_null_fields(self):
+        # ensure null audio and assets records fields are accepted
+        rec_name = 'nullfields'
+        path = '/records/dropbox/{0}/{1}'.format(userid, rec_name)
+        app.delete(path)
+        record = os.path.join(config.get('test', 'test_resources'), '{0}.json'.format(rec_name))
+        content = None
+        with open(record, 'r') as f:
+            content = f.read()
+        resp = app.post(
+            path,
+            upload_files=[("file" , record)]).json
+        self.assertEquals(resp['msg'], 'File uploaded')
+        self.assertEquals(resp['path'], '/records/{0}/record.json'.format(rec_name))
+        self.assertEquals(resp['error'], 0)
+
+        fp = '{0}/record.json'.format(path)
+        resp = app.get(fp)
+        self.assertEquals(resp.body , content)
 
 class TestDropboxEditors(unittest.TestCase):
     """
