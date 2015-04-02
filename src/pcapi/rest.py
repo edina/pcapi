@@ -304,24 +304,24 @@ class PCAPIRest(object):
                 return {"error":1 , "msg": str(e)}
 
     def surveys(self, provider, userid, sid):
-        """ This is the new version of editors API for COBWEB which will eventually 
+        """ This is the new version of editors API for COBWEB which will eventually
         replace /editors/.
-       
+
         GET /surveys/local/UUID
-        A GET request for all editors (path=/) will query geonetwork and return 
+        A GET request for all editors (path=/) will query geonetwork and return
         all surveys with their names eg.
         {
             "metadata": [ "b29c63ae-adc6-4732", "c8942133-22ce-4f93" ],
             "names": ["Another Woodlands Survey", "Grassland survey"]
         }
-        
+
         GET /surveys/local/UUID/SURVEYID
         Will return the survey (editor) file contents after querying geonetwork for it
         """
         log.debug('survey({0}, {1}, {2})'.format(provider, userid, sid))
 
         surveys = geonetwork.get_surveys(userid)
-        
+
         if not sid:
             # Return all registered surveys
             return surveys.get_summary_ftopen()
@@ -339,18 +339,18 @@ class PCAPIRest(object):
 
     def editors(self, provider, userid, path, flt):
         """ Normally this is just a shortcut for /fs/ calls to the /editors directory.
-        
+
         A GET request for all editors (path=/) should parse each editor and
         return their names (s.a. documentation).
-        
-        When called with public=true, then PUT/POST requests will also apply to 
+
+        When called with public=true, then PUT/POST requests will also apply to
         the public folder (as defined in pcapi.ini).
 
         In the future this call will be obsolete by surveys. We are keeping this
         for compatibility with non-COBWEB users who don't want to depend on geonetwork,
          SAML overrides, geoserver etc.
         """
-        
+
         error = self.auth(provider,userid)
         if (error):
             return error
@@ -364,7 +364,7 @@ class PCAPIRest(object):
         # No subdirectories are allowed when accessing editors
         if re.findall("/editors//?[^/]*$",path):
             res = self.fs(provider,userid,path,frmt=flt)
-            
+
             # If "GET /editors//" is reguested then add a "names" parameter
             if path == "/editors//" and res["error"] == 0 and provider == "local" \
                 and self.request.method == "GET":
@@ -383,13 +383,13 @@ class PCAPIRest(object):
                         names.append(None)
                 log.debug(`names`)
                 res["names"] = names
-                
+
                 # we convert /editors//XXX.whatever as XXX.whatever
                 # TODO: when editors become json, put decision trees inside the editor file
                 # and remove all filename extensions (like in /surveys/)
                 res["metadata"] = [ re.sub(r'/editors//?(.*)', r'\1', x) for x in res["metadata"] ]
 
-            ## If public==true then execute the same PUT/POST command to the 
+            ## If public==true then execute the same PUT/POST command to the
             ## public UUID (s. pcapi.ini) and return that result
             elif provider == "local" and \
             ( self.request.method == "PUT" or self.request.method == "POST"):
@@ -405,13 +405,13 @@ class PCAPIRest(object):
         return { "error": 1, "msg": "Path %s has subdirectories, which are not allowed" % path}
 
     def layers(self, provider, userid, path):
-        """ High level layer (overlay) functions. Normally it is a shortcut to 
+        """ High level layer (overlay) functions. Normally it is a shortcut to
         /fs/ for the /layers folder.
 
-        When called with public=true, then ALL requests will also apply to 
+        When called with public=true, then ALL requests will also apply to
         the public folder (as defined in pcapi.ini).
 
-        """        
+        """
         log.debug('layers(%s, %s, %s)' % (provider, userid, path) )
 
         error = self.auth(provider, userid)
@@ -422,7 +422,7 @@ class PCAPIRest(object):
         # No subdirectories are allowed when accessing layers
         if re.findall("/layers//?[^/]*$",path):
             res = self.fs(provider,userid,path)
-            ## If public==true then execute the same command to the 
+            ## If public==true then execute the same command to the
             ## public UUID (s. pcapi.ini) and return that result
             try:
                 public = self.request.GET.get("public")
@@ -449,7 +449,7 @@ class PCAPIRest(object):
         """
         #url unquote does not happend automatically
         path = urllib2.unquote(path)
-        
+
         log.debug('fs( %s, %s, %s, %s, %s)' % (provider, userid, path, process, frmt) )
 
         #TODO: make a ProviderFactory class once we have >2 providers
@@ -492,7 +492,9 @@ class PCAPIRest(object):
                                 obj = json.loads(body)
                                 log.debug(obj)
                                 for field in obj["properties"]["fields"]:
-                                    if "image-" in field["id"] or "audio-" in field["id"]:
+                                    # process images and audio assets
+                                    # note: null (None) is a valid field value
+                                    if ("image-" in field["id"] or "audio-" in field["id"]) and field["val"] != None:
                                         res = self.provider.search(path.replace("record.json", ""), field["val"])
                                         log.debug(len(res.md))
                                         if len(res.md) == 0:
@@ -672,7 +674,7 @@ class PCAPIRest(object):
         self.response.headers['Content-Type'] = 'application/json'
         features = []
         for r in records:
-            #log.debug(r.content)        
+            #log.debug(r.content)
             # get first -and only- value of dictionary because records are an array of
             # [ { <name> : <geojson feature> } ....]
             f = r.content.values()[0]
