@@ -1,0 +1,27 @@
+{
+    "geometry": {
+        "type": "Point",
+        "coordinates": [-3.187329203375782, 55.92944573914203]
+    },
+    "properties": {
+        "editor": "custom.edtr",
+        "fields": [
+            {
+                "id": "fieldcontain-textarea-1",
+                "val": "",
+                "label": "Description"
+            },
+            {
+                "id": "fieldcontain-image-1",
+                "label": "Image",
+                "val": null
+            },
+            {
+                "id": "fieldcontain-audio-1",
+                "label": "Image",
+                "val": null
+            }
+        ],
+        "timestamp": "2014-04-25T11:27:30.138Z"
+    }
+}
