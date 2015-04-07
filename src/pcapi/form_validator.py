@@ -119,7 +119,8 @@ class FormValidator:
             if 'action' in tag.attrs:
                 return False
 
-        valid_input_type = ['text', 'checkbox', 'radio', 'submit', 'button', 'range', 'file']
+        valid_input_type = ['text', 'checkbox', 'radio', 'submit', 'button',
+                            'range', 'file', 'hidden']
         if tag.name == 'input':
             if tag.get('type') not in valid_input_type:
                 log.debug("False because of input type %s" % tag.get('type'))
