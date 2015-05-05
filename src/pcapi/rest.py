@@ -837,8 +837,15 @@ class PCAPIRest(object):
                     log.debug("transformed dates %s %s" % (epoch_start, epoch_end))
                 except ValueError:
                     return {"msg": "Bad date given. An example date would be 20120327_23:05:12", "error": 1 }
-                records_cache = [ r for r in records_cache if \
-                            r.metadata.mtime() >= epoch_start and r.metadata.mtime() <= epoch_end ]
+
+                tmp_cache = []
+                for x in records_cache:
+                    for r in x.content.itervalues():
+                        ts = r['properties']['timestamp']
+                        rec_time = time.mktime(time.strptime(ts, '%Y-%m-%dT%H:%M:%S.%fZ'))
+                        if rec_time >= epoch_start and rec_time <= epoch_end:
+                            tmp_cache.append(x)
+                records_cache = tmp_cache
                 log.debug(len(records_cache))
             if "envelope" in filters:
                 bbox = self.request.GET.get("bbox")

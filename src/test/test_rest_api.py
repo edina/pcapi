@@ -261,19 +261,78 @@ class TestDropboxRecords(unittest.TestCase):
 
     def test_filter_by_date(self):
         """ GET by date """
-        #print "start test_filter_by_date"
         #cleanup EVERYTHING under /records/
         app.delete('/records/dropbox/%s//' % userid)
         # get current time
         import time
         timenow = time.strftime("%Y%m%d_%H:%M:%S", time.localtime())
-        # create myrecord/record.json
-        resp = app.post('/records/dropbox/%s/myrecord' % userid, upload_files=[("file" , textfilepath )] ).json
-        self.assertEquals(resp["error"], 0)
-        self.assertEquals(resp["path"], "/records/myrecord/record.json")
-        # Get all file since start time
-        resp = app.get('/records/dropbox/%s/' % userid, params={ "filter":"date","start_date": timenow}).json
-        self.assertEquals(resp["error"], 0)
+        dfp = os.path.join(config.get('test', 'test_resources'), 'date_filter')
+
+        # create 3 records
+        name = 'one'
+        one = os.path.join(dfp, '{0}.rec'.format(name))
+        resp = app.post('/records/dropbox/{0}/{1}'.format(userid, name), upload_files=[('file' , one)]).json
+        self.assertEquals(resp['error'], 0)
+        self.assertEquals(resp['path'], '/records/{0}/record.json'.format(name))
+        name = 'two'
+        two = os.path.join(dfp, '{0}.rec'.format(name))
+        resp = app.post('/records/dropbox/{0}/{1}'.format(userid, name), upload_files=[('file' , two)]).json
+        self.assertEquals(resp['error'], 0)
+        self.assertEquals(resp['path'], '/records/{0}/record.json'.format(name))
+        name = 'three'
+        three = os.path.join(dfp, '{0}.rec'.format(name))
+        resp = app.post('/records/dropbox/{0}/{1}'.format(userid, name), upload_files=[('file' , three)]).json
+        self.assertEquals(resp['error'], 0)
+        self.assertEquals(resp['path'], '/records/{0}/record.json'.format(name))
+
+        # get all records from now
+        resp = app.get('/records/dropbox/{0}/'.format(userid),
+            params={
+                'filter':'date',
+                'start_date': timenow
+            }).json
+        self.assertEquals(resp['error'], 0)
+        self.assertEquals(len(resp['records']), 0)
+
+        # get records since before first
+        before_one = '20120505_17:46:37'
+        resp = app.get('/records/dropbox/{0}/'.format(userid),
+            params={
+                'filter': 'date',
+                'start_date': before_one
+            }).json
+        self.assertEquals(resp['error'], 0)
+        self.assertEquals(len(resp['records']), 3)
+
+        # get records since before second
+        before_second = '20130505_17:46:37'
+        resp = app.get('/records/dropbox/%s/' % userid,
+            params={
+                'filter': 'date',
+                'start_date': before_second
+            }).json
+        self.assertEquals(resp['error'], 0)
+        self.assertEquals(len(resp['records']), 2)
+
+        # get records since before third
+        before_third = '20150205_17:46:37'
+        resp = app.get('/records/dropbox/%s/' % userid,
+            params={
+                'filter': 'date',
+                'start_date': before_third
+            }).json
+        self.assertEquals(resp['error'], 0)
+        self.assertEquals(len(resp['records']), 1)
+
+        # test range
+        resp = app.get('/records/dropbox/%s/' % userid,
+            params={
+                'filter': 'date',
+                'start_date': before_one,
+                'end_date': before_third
+            }).json
+        self.assertEquals(resp['error'], 0)
+        self.assertEquals(len(resp['records']), 2)
 
     def test_filter_by_editor_id(self):
         """ GET by editor id """
