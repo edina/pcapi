@@ -376,6 +376,24 @@ class TestDropboxRecords(unittest.TestCase):
         resp = app.get('/records/dropbox/%s/' % userid, params={ "filter":"media","mediatype": "images"}).json
         self.assertEquals(resp["error"], 0)
 
+    def test_export_csv(self):
+        app.delete('/records/dropbox/{0}//'.format(userid))
+        resp = app.post(
+            '/records/dropbox/{0}/myrecord'.format(userid),
+            upload_files=[("file", textfilepath)]).json
+        self.assertEquals(resp["error"], 0)
+        print textfilepath
+        print resp
+        resp = app.get(
+            '/records/dropbox/{0}/'.format(userid),
+            params={
+                "filter": "format",
+                "frmt": "csv"}
+        )
+
+        self.assertEquals(resp.status, '200 OK')
+        self.assertGreater(len(resp.body), 0)
+
     def test_null_fields(self):
         # ensure null audio and assets records fields are accepted
         rec_name = 'nullfields'

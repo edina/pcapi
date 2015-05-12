@@ -732,17 +732,17 @@ class PCAPIRest(object):
             for r in records:
                 for record in r.content.itervalues():
                     new_records.append(record)
-            results = sorted(new_records, key=itemgetter('editor'))
+            results = sorted(new_records, key=lambda k: k['properties']['editor'])
             for record in results:
                 if editor != record["properties"]["editor"]:
                     log.debug(record["properties"]["editor"])
-                    path = "/editors/"+record["properties"]["editor"]
                     if record["properties"]["editor"] == "image.edtr" or record["properties"]["editor"] == "audio.edtr" or record["properties"]["editor"] == "text.edtr":
                         ed = urllib2.urlopen("http://fieldtripgb.edina.ac.uk/authoring/editors/default/"+record["properties"]["editor"]).read()
                     elif record["properties"]["editor"] == "track.edtr":
                         ed = urllib2.urlopen("http://fieldtripgb.edina.ac.uk/authoring/editors/default/text.edtr").read()
                     else:
                         try:
+                            path = "/editors/"+record["properties"]["editor"]
                             buf, meta = self.provider.get_file_and_metadata(path)
                             ed = buf.read()
                         except Exception as e:

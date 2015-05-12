@@ -1,4 +1,5 @@
 {
+  "name": "testrec",
   "geometry": {
     "type": "Point",
     "coordinates": [-3.187329203375782, 55.92944573914203]
