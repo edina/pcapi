@@ -37,11 +37,24 @@ def deploy(version='cobweb-dev'):
 
     local("""rsync -e"ssh -p%s" --exclude resources -C -av %s/ %s@%s:%s"""
     % (env.port, CURRENT_PATH, env.user, env.host, REMOTE_PATH ) )
-    
+
     with cd(REMOTE_PATH):
         run("echo y | pip uninstall pcapi")
         run("pip install --user .")
         #sudo("/etc/init.d/httpd graceful")
+
+@task
+def deploy_with_venv(version='dev'):
+    """Rsync everything to server, pip installs as user and restarts apache"""
+
+    REMOTE_PATH = os.path.join ( '~/dist/pcapi', version )
+
+    local("""rsync -e"ssh -p%s" --exclude resources -C -av %s/ %s@%s:%s"""
+    % (env.port, CURRENT_PATH, env.user, env.host, REMOTE_PATH ) )
+
+    #create virtual environment
+    run("cd {0}; virtualenv --no-site-packages .".format(REMOTE_PATH))
+    run("cd {0}; ./bin/pip install -r etc/requirements.txt".format(REMOTE_PATH))
 
 def _config(var, section='install'):
     """ Read default values from fab.ini. Missing values are None """
