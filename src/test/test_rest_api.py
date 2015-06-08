@@ -264,8 +264,8 @@ class TestDropboxRecords(unittest.TestCase):
         #cleanup EVERYTHING under /records/
         app.delete('/records/dropbox/%s//' % userid)
         # get current time
-        import time
-        timenow = time.strftime("%Y%m%d_%H:%M:%S", time.localtime())
+        from datetime import datetime
+        timenow = datetime.utcnow().strftime(date_frmt)
         dfp = os.path.join(config.get('test', 'test_resources'), 'date_filter')
 
         # create 3 records
@@ -295,7 +295,7 @@ class TestDropboxRecords(unittest.TestCase):
         self.assertEquals(len(resp['records']), 0)
 
         # get records since before first
-        before_one = '20120505_17:46:37'
+        before_one = '2012-05-05T17:46:37.001Z'
         resp = app.get('/records/dropbox/{0}/'.format(userid),
             params={
                 'filter': 'date',
@@ -305,7 +305,7 @@ class TestDropboxRecords(unittest.TestCase):
         self.assertEquals(len(resp['records']), 3)
 
         # get records since before second
-        before_second = '20130505_17:46:37'
+        before_second = '2013-05-05T17:46:37.012Z'
         resp = app.get('/records/dropbox/%s/' % userid,
             params={
                 'filter': 'date',
@@ -315,7 +315,7 @@ class TestDropboxRecords(unittest.TestCase):
         self.assertEquals(len(resp['records']), 2)
 
         # get records since before third
-        before_third = '20150205_17:46:37'
+        before_third = '2015-02-05T17:46:37.123Z'
         resp = app.get('/records/dropbox/%s/' % userid,
             params={
                 'filter': 'date',

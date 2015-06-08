@@ -836,6 +836,7 @@ class PCAPIRest(object):
                 #records_cache = [r for r in records_cache.itervalues() if r is not None and r.content["editor"].lower() == f_id]
                 log.debug("found filter by editor")
             if "date" in filters:
+                date_fmt = '%Y-%m-%dT%H:%M:%S.%fZ'
                 ## "date" filter requires at least a "start_date"
                 start_date = self.request.GET.get("start_date")
                 if not start_date:
@@ -844,18 +845,19 @@ class PCAPIRest(object):
                 log.debug("filter by dates %s %s" % (start_date, end_date) )
                 try:
                     # parse the dates to unix epoch format. End time defaults to localtime )
-                    epoch_start =  time.mktime(time.strptime(start_date,"%Y%m%d_%H:%M:%S"))
-                    epoch_end = time.mktime(time.strptime(end_date,"%Y%m%d_%H:%M:%S") \
+                    epoch_start =  time.mktime(time.strptime(start_date, date_fmt))
+                    epoch_end = time.mktime(time.strptime(end_date, date_fmt) \
                                         if end_date else time.localtime())
                     log.debug("transformed dates %s %s" % (epoch_start, epoch_end))
-                except ValueError:
-                    return {"msg": "Bad date given. An example date would be 20120327_23:05:12", "error": 1 }
+                except ValueError as e:
+                    log.debug(e)
+                    return {"msg": "Bad date given. An example date would be 2015-03-27T23:05:12.000Z", "error": 1 }
 
                 tmp_cache = []
                 for x in records_cache:
                     for r in x.content.itervalues():
                         ts = r['properties']['timestamp']
-                        rec_time = time.mktime(time.strptime(ts, '%Y-%m-%dT%H:%M:%S.%fZ'))
+                        rec_time = time.mktime(time.strptime(ts, date_fmt))
                         if rec_time >= epoch_start and rec_time <= epoch_end:
                             tmp_cache.append(x)
                 records_cache = tmp_cache
