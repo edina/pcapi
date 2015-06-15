@@ -22,7 +22,7 @@ setup(
                       'WebTest==2.0.4',
                       'psycopg2==2.5.3',
                       'pysqlite==2.6.3',
-		      'ppygis==0.2'],
+                      'ppygis==0.2'],
 
     zip_safe=True,
     entry_points={
