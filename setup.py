@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pcapi",
-    version="1.4",
+    version="1.3.10",
     packages=find_packages('src'),
     package_dir={'': 'src'},
     include_package_data=True,
