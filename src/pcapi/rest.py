@@ -491,6 +491,8 @@ class PCAPIRest(object):
                                 log.debug("asset in record")
                                 obj = json.loads(body)
                                 log.debug(obj)
+
+                                missing_assets = []
                                 for field in obj["properties"]["fields"]:
                                     # process images and audio assets
                                     # note: null (None) is a valid field value
@@ -498,9 +500,16 @@ class PCAPIRest(object):
                                         res = self.provider.search(path.replace("record.json", ""), field["val"])
                                         log.debug(len(res.md))
                                         if len(res.md) == 0:
-                                            log.debug("no such a file in dbox")
-                                            self.response.status = 409
-                                            return { "error": 1, "msg" : "The record is incomplete!"}
+                                            missing_assets.append(field["val"])
+
+                                if len(missing_assets) > 0:
+                                    missing_assets_str = ','.join(missing_assets)
+                                    log.debug("Missing assets: [{0}]".format(missing_assets_str))
+                                    self.response.status = 409
+                                    msg = "Some of the files captured in the " \
+                                          "record are missing: [{0}]".format(missing_assets_str)
+                                    return { "error": 1, "msg" : msg }
+
                             #return httpres
                             return Response(body=body, status='200 OK', headers=headers)
                         else:
