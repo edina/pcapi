@@ -3,6 +3,10 @@ SQL Data Definition and Data Manipulation Language (DDL & DML) i.e schema and da
 
 import json, re
 
+from pcapi import logtool
+log = logtool.getLogger("mapping", "pcapi.publish")
+
+
 def mapping(js_rec,userid):
     """ Takes records as json and returns and array of [<tablename>, <title>, <DDL>, <DML>] 
     values for SQL substitution.
@@ -13,8 +17,13 @@ def mapping(js_rec,userid):
     # parse record json
     rec = json.loads(js_rec)
 
-    # check if table exists -- defined by editor field without ".edtr" extension
-    tname =  rec["properties"]["editor"][:-5]
+    # check if table exists -- defined by editor field without the ".edtr" extension
+    # However there is an unresolved FTOpen bug where sometimes the ".edtr" is missing.
+    if( len(rec["properties"]["editor"]) == 41 ):
+        tname = rec["properties"]["editor"][:-5]
+    else:
+        tname = rec["properties"]["editor"]
+        log.debug('Workaround -- record {0} sent without ".edtr" suffix'.format(rec["name"]))
     tname = whitelist_table(tname)
     # title is purely for making people using geoserver directly
     if ( rec["properties"].has_key("title") ):
@@ -50,9 +59,14 @@ def mapping(js_rec,userid):
         ddl.append("record_id TEXT")
         dml.append(rec["properties"]["id"])
     ## Geometry(!)
-    # Assume caller will use "AddGeometryColumn" on ddl when creating the table
-    lon, lat = rec["geometry"]["coordinates"]
-    dml.append( 'POINT({0} {1})'.format(lon,lat))
+    # Using new PostGIS 2.0 functions that don't rely on AddGeometryColumn and 
+    # can parse GeoJSON with custom crs
+    if not rec["geometry"].has_key("crs"):
+        #Assumme 4326 if source geometry has no crs field
+        rec["geometry"]["crs"] = {"type":"name", "properties":{"name":"EPSG:4326"} }
+    # target geometry is always 4326
+    ddl.append('geom geometry({0},4326)'.format(rec["geometry"]["type"]))
+    dml.append( json.dumps(rec["geometry"]))
     res = [ tname, title, ddl, dml ]
     return res
 
@@ -146,5 +160,3 @@ if __name__ == "__main__":
     create_query = u'CREATE TABLE IF NOT EXISTS "{0}" ({1});'.format(table,\
     u", ".join(ddl))
     print create_query
-    geo_query = "SELECT AddGeometryColumn( '{0}', 'geom', 4326, 'POINT', 2 )".format(table)
-    print geo_query
