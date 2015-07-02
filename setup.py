@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pcapi",
-    version="1.4",
+    version="1.3.10",
     packages=find_packages('src'),
     package_dir={'': 'src'},
     include_package_data=True,
@@ -22,7 +22,7 @@ setup(
                       'WebTest==2.0.4',
                       'psycopg2==2.5.3',
                       'pysqlite==2.6.3',
-		      'ppygis==0.2'],
+                      'ppygis==0.2'],
 
     zip_safe=True,
     entry_points={
