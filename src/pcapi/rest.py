@@ -215,7 +215,6 @@ class PCAPIRest(object):
             bulk = [ r.content for r in records_cache ]
             return {"records": bulk, "error": 0 }
 
-
     def __process_record(self, body, status, headers):
         try:
             record = json.loads(body)
@@ -236,17 +235,14 @@ class PCAPIRest(object):
                       "record are missing: [{0}]".format(missing_assets_str)
 
                 status = '409 Missing Assets'
-                body = json.dumps({ "error": 1, "msg" : msg })
-                headers['content-type'] = 'text/json'
-                headers['content-length'] = len(body)
+                body = { "error": 1, "msg" : msg }
             else:
+                headers['content-type'] = 'text/json'
                 status = '200 OK'
         except ValueError:
             status = '403 Forbidden'
             msg = 'Invalid json record'
-            body = json.dumps({"error": 1, "msg" : msg})
-            headers['content-type'] = 'text/json'
-            headers['content-length'] = len(body)
+            body = {"error": 1, "msg" : msg}
 
         return body, status, headers
 
@@ -371,26 +367,22 @@ class PCAPIRest(object):
             return res
         return {"error":1, "msg":"Unexpected error" }
 
-    def __process_editor(self, body, status, headers):
+    def __process_editor(self, body, status, headers, frmt=None):
         validator = FormValidator(body)
+        headers = None
         if validator.validate():
             log.debug("valid html5")
-            # if frmt == 'android':
-            #     log.debug('it s an android')
-            #     parser = COBWEBFormParser(body)
-            #     body = parser.extract()
+            if frmt == 'android':
+                log.debug('it s an android')
+                parser = COBWEBFormParser(body)
+                body = parser.extract()
             status = '200 OK'
-            return body, status, headers
         else:
             log.debug("non valid html5")
-            # self.response.status = 403
-            # return { "error": 1, "msg" : "The editor is not valid"}
-            body = JSON.dumps({ "error": 1, "msg" : "The editor is not valid"})
+            body = { "error": 1, "msg" : "The editor is not valid"}
             status = 403
-            headers['content-type'] = 'text/json'
-            headers['content-length'] = len(body)
-            return body, status, headers
 
+        return body, status, headers
 
     def editors(self, provider, userid, path, flt):
         """ Normally this is just a shortcut for /fs/ calls to the /editors directory.
@@ -418,7 +410,8 @@ class PCAPIRest(object):
             self.provider.mkdir("/editors")
         # No subdirectories are allowed when accessing editors
         if re.findall("/editors//?[^/]*$",path):
-            res = self.fs(provider,userid,path,frmt=flt, process=self.__process_editor)
+            process_editor_with_frmt = lambda body, status, headers: self.__process_editor(body, status, headers, frmt=flt)
+            res = self.fs(provider,userid,path,frmt=flt, process=process_editor_with_frmt)
 
             # If "GET /editors//" is reguested then add a "names" parameter
             if path == "/editors//" and res["error"] == 0 and provider == "local" \
@@ -530,25 +523,30 @@ class PCAPIRest(object):
                     log.debug(metadata)
                     body = httpres.read()
                     headers = {}
+                    status = '200 OK'
                     if (provider == "local"):
                         return Response(body=body, status='200 OK', headers=headers)
                     #DROPBOX-specific error checks for editors and records.
                     #TODO: Move outside /fs/ e.g. GET for /records/...
                     else:
                         for name, value in httpres.getheaders():
-                            if name != "connection":
-                                self.response[name] = value
+                            # Remove headers that might change in the processing
+                            if name not in ["connection", 'content-length']:
                                 headers[name] = value
-                        log.debug(headers)
+                    if process:
+                        log.debug('Processing record')
+                        body, status, headers = process(body, None, headers)
 
-                        if process:
-                            log.debug('Processing record')
-                            body, status, headers = process(body, None, headers)
-                            return LocalResponse(body=body, status=status, headers=headers)
-                        else:
-                            return Response(body=body, status='200 OK', headers=headers)
+                    log.debug(headers)
 
-            ######## PUT -> Upload/Overwrite file using dropbox rules ########
+                    # Update the headers and the status of the request
+                    self.response.status = status
+                    for name, value in headers.iteritems():
+                        self.response[name] = value
+
+                    # Return the body
+                    return body
+          ######## PUT -> Upload/Overwrite file using dropbox rules ########
             if method=="PUT":
                 fp = self.request.body
                 md = self.provider.upload(path, fp, overwrite=True)
