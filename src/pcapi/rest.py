@@ -215,6 +215,36 @@ class PCAPIRest(object):
             bulk = [ r.content for r in records_cache ]
             return {"records": bulk, "error": 0 }
 
+    def __process_record(self, body, status, headers):
+        try:
+            record = json.loads(body)
+            log.debug(record)
+            missing_assets = []
+            for field in record["properties"]["fields"]:
+                # process images and audio assets
+                # note: null (None) is a valid field value
+                if ("image-" in field["id"] or "audio-" in field["id"]) and field["val"] != None:
+                    res = self.provider.search('/records/{0}/'.format(record["name"]), field["val"])
+                    if len(res.md) == 0:
+                        missing_assets.append(field["val"])
+
+            if len(missing_assets) > 0:
+                missing_assets_str = ','.join(missing_assets)
+                log.debug("Missing assets: [{0}]".format(missing_assets_str))
+                msg = "Some of the files captured in the " \
+                      "record are missing: [{0}]".format(missing_assets_str)
+
+                status = '409 Missing Assets'
+                body = { "error": 1, "msg" : msg }
+            else:
+                headers['content-type'] = 'text/json'
+                status = '200 OK'
+        except ValueError:
+            status = '403 Forbidden'
+            msg = 'Invalid json record'
+            body = {"error": 1, "msg" : msg}
+
+        return body, status, headers
 
     def records(self, provider, userid, path, flt, ogc_sync):
         """
@@ -279,7 +309,7 @@ class PCAPIRest(object):
                             res = postgis.put_record(provider, userid, path)
                             return res
                         ###
-                        return self.fs(provider,userid,path + "/record.json")
+                        return self.fs(provider,userid,path + "/record.json", process=self.__process_record)
                     ### Process all filters one by one and return the result
                     filters = flt.split(",") if flt else []
                     #records_cache = self.create_records_cache(path) <--- WHAT IS THAT???
@@ -337,6 +367,23 @@ class PCAPIRest(object):
             return res
         return {"error":1, "msg":"Unexpected error" }
 
+    def __process_editor(self, body, status, headers, frmt=None):
+        validator = FormValidator(body)
+        headers = None
+        if validator.validate():
+            log.debug("valid html5")
+            if frmt == 'android':
+                log.debug('it s an android')
+                parser = COBWEBFormParser(body)
+                body = parser.extract()
+            status = '200 OK'
+        else:
+            log.debug("non valid html5")
+            body = { "error": 1, "msg" : "The editor is not valid"}
+            status = 403
+
+        return body, status, headers
+
     def editors(self, provider, userid, path, flt):
         """ Normally this is just a shortcut for /fs/ calls to the /editors directory.
 
@@ -363,7 +410,8 @@ class PCAPIRest(object):
             self.provider.mkdir("/editors")
         # No subdirectories are allowed when accessing editors
         if re.findall("/editors//?[^/]*$",path):
-            res = self.fs(provider,userid,path,frmt=flt)
+            process_editor_with_frmt = lambda body, status, headers: self.__process_editor(body, status, headers, frmt=flt)
+            res = self.fs(provider,userid,path,frmt=flt, process=process_editor_with_frmt)
 
             # If "GET /editors//" is reguested then add a "names" parameter
             if path == "/editors//" and res["error"] == 0 and provider == "local" \
@@ -475,58 +523,30 @@ class PCAPIRest(object):
                     log.debug(metadata)
                     body = httpres.read()
                     headers = {}
+                    status = '200 OK'
                     if (provider == "local"):
                         return Response(body=body, status='200 OK', headers=headers)
                     #DROPBOX-specific error checks for editors and records.
                     #TODO: Move outside /fs/ e.g. GET for /records/...
                     else:
                         for name, value in httpres.getheaders():
-                            if name != "connection":
-                                self.response[name] = value
+                            # Remove headers that might change in the processing
+                            if name not in ["connection", 'content-length']:
                                 headers[name] = value
-                        log.debug(headers)
-                        if not "editors" in path:
-                            log.debug("not editors")
-                            if "image-" in body or "audio-" in body:
-                                log.debug("asset in record")
-                                obj = json.loads(body)
-                                log.debug(obj)
+                    if process:
+                        log.debug('Processing record')
+                        body, status, headers = process(body, None, headers)
 
-                                missing_assets = []
-                                for field in obj["properties"]["fields"]:
-                                    # process images and audio assets
-                                    # note: null (None) is a valid field value
-                                    if ("image-" in field["id"] or "audio-" in field["id"]) and field["val"] != None:
-                                        res = self.provider.search(path.replace("record.json", ""), field["val"])
-                                        log.debug(len(res.md))
-                                        if len(res.md) == 0:
-                                            missing_assets.append(field["val"])
+                    log.debug(headers)
 
-                                if len(missing_assets) > 0:
-                                    missing_assets_str = ','.join(missing_assets)
-                                    log.debug("Missing assets: [{0}]".format(missing_assets_str))
-                                    self.response.status = 409
-                                    msg = "Some of the files captured in the " \
-                                          "record are missing: [{0}]".format(missing_assets_str)
-                                    return { "error": 1, "msg" : msg }
+                    # Update the headers and the status of the request
+                    self.response.status = status
+                    for name, value in headers.iteritems():
+                        self.response[name] = value
 
-                            #return httpres
-                            return Response(body=body, status='200 OK', headers=headers)
-                        else:
-                            #body = httpres.read()
-                            validator = FormValidator(body)
-                            if validator.validate():
-                                log.debug("valid html5")
-                                if frmt == 'android':
-                                    log.debug('it s an android')
-                                    parser = COBWEBFormParser(body)
-                                    body = parser.extract()
-                                return Response(body=body, status='200 OK', headers=headers)
-                            else:
-                                log.debug("non valid html5")
-                                self.response.status = 403
-                                return { "error": 1, "msg" : "The editor is not valid"}
-            ######## PUT -> Upload/Overwrite file using dropbox rules ########
+                    # Return the body
+                    return body
+          ######## PUT -> Upload/Overwrite file using dropbox rules ########
             if method=="PUT":
                 fp = self.request.body
                 md = self.provider.upload(path, fp, overwrite=True)

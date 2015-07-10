@@ -414,6 +414,35 @@ class TestDropboxRecords(unittest.TestCase):
         resp = app.get(fp)
         self.assertEquals(resp.body , content)
 
+    def test_get_incomplete_record(self):
+        """ Get a record with a missing asset """
+
+        record_name = 'incompleteaudio'
+        records_rel_path = '/records/{0}/record.json'.format(record_name)
+        record_remote_path = '/records/dropbox/{0}/{1}'.format(userid, record_name)
+        record_remote_json_path = '/records/dropbox/{0}/{1}/record.json'.format(userid, record_name)
+        record_local_path = os.path.join(config.get('test', 'test_resources'), 'test1')
+        record_json_path = '{0}/record.json'.format(record_local_path)
+        record_payload = open(record_json_path, 'r').read()
+
+        # Clean the record
+        app.delete(record_remote_path)
+
+        # Upload the record
+        resp = app.post(record_remote_path, params=record_payload)
+        self.assertEquals(resp.json["error"], 0)
+        self.assertEquals(resp.json["path"], records_rel_path)
+
+        # The record contains an audio asset that hasn't been uploaded
+
+        # It should be accessible via the record.json call
+        resp = app.get(record_remote_json_path)
+        self.assertEquals(resp.body, record_payload)
+
+        # It shouldn't be accessible via the record call
+        resp = app.get(record_remote_path, expect_errors=True)
+        self.assertEquals(resp.json["error"], 1)
+
 class TestDropboxEditors(unittest.TestCase):
     """
     Test: REST functions for /editors/dropbox API
