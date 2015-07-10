@@ -5,6 +5,7 @@
 """
 For an explanation of each config. item see comments in resource/config.ini
 """
+from pcapi import version
 from pkg_resources import resource_filename
 
 import ConfigParser
@@ -22,7 +23,8 @@ def get(section, key):
     return config.get(section, key)
 def getboolean(section, key):
     return config.getboolean(section, key)
-
+def has_option(section, option):
+    return config.has_option(section, option)
 
 def getCCMap():
     ccmap = {
@@ -37,8 +39,14 @@ def getCCMap():
 
 
 # init config
+# if a pcapi.ini file is found in more than one location
+# the value from the latest added will be used
+
+
 config_paths = []
-config_paths.append(os.path.join(home, '.pcapi', 'pcapi.ini'))
+conf_dir = os.path.join(home, '.pcapi')
+config_paths.append(os.path.join(conf_dir, 'pcapi.ini'))
+config_paths.append(os.path.join(conf_dir, str(version), 'pcapi.ini'))
 config_paths.append(os.path.join('.', 'pcapi.ini'))
 default_config_file = None
 
@@ -47,7 +55,7 @@ found_paths = config.read(config_paths)
 
 # fallback to bundled configuration file
 if len(found_paths) == 0:
-    print 'Not config files found in the default locations tried:'
+    print 'No config files found in the default locations tried:'
     for path in config_paths:
         print path
     print 'Creating default skeleton using default configuration'
