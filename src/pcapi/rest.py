@@ -10,7 +10,7 @@ import urllib2
 import time
 import zipfile
 
-from bottle import Response, abort
+from bottle import Response, LocalResponse, abort
 from StringIO import StringIO
 from operator import itemgetter
 from wand.image import Image

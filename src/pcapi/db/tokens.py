@@ -26,7 +26,6 @@ def save_access_tokens(userid, req_secret, acc_key, acc_secret):
     c = conn.cursor()
     c.execute(SAVE_ACCESS_TOKENS, (userid, req_secret, acc_key, acc_secret, userid))
     conn.commit()
-
     return c.rowcount == 1
 
 def get_access_pair(userid):
@@ -39,6 +38,7 @@ def delete_token(userid):
     """ delete token with provided userid """
     c = conn.cursor()
     c.execute(DELETE_TOKEN, (userid,))
+    conn.commit()
     return c.rowcount == 1
 
 ### temporary values #####
@@ -54,6 +54,7 @@ def save_unverified_request( userid, req_secret ):
     c = conn.cursor()
     res = c.execute(SAVE_UNVERIFIED_REQUEST, (userid, req_secret, userid))
     conn.commit()
+    return True
 
 def delete_unverified_request(userid):
     """ Delete an user temporary request returns always True """
