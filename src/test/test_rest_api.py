@@ -263,8 +263,10 @@ class TestDropboxRecords(unittest.TestCase):
         """ GET by date """
         #cleanup EVERYTHING under /records/
         app.delete('/records/dropbox/%s//' % userid)
+
         # get current time
         from datetime import datetime
+        date_frmt = '%Y-%m-%dT%H:%M:%S.%fZ'
         timenow = datetime.utcnow().strftime(date_frmt)
         dfp = os.path.join(config.get('test', 'test_resources'), 'date_filter')
 
