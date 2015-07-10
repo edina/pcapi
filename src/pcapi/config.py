@@ -82,5 +82,5 @@ if not os.path.exists(log_path):
 
 data_path = config.get("path", "data_dir")
 if not os.path.exists(data_path):
-    print 'Creating logs directory: {0}'.format(data_path)
+    print 'Creating data directory: {0}'.format(data_path)
     os.makedirs(data_path)

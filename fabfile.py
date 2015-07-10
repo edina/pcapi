@@ -1,4 +1,5 @@
-from fabric.api import env, hosts, cd, lcd, local, task, run, put, prompt, sudo
+from contextlib import contextmanager
+from fabric.api import env, hosts, cd, lcd, local, task, run, put, prefix, prompt, sudo
 from fabric.contrib.project import rsync_project
 import os, ConfigParser
 import sys
@@ -18,6 +19,11 @@ fab server:cobweb deploy
 # GLOBALS
 CURRENT_PATH = os.path.abspath(os.path.dirname(__file__))
 config=None
+
+@contextmanager
+def virtualenv(env):
+    with prefix('source {0}/bin/activate'.format(env)):
+        yield
 
 @task
 def server(serv):
@@ -44,17 +50,31 @@ def deploy(version='cobweb-dev'):
         #sudo("/etc/init.d/httpd graceful")
 
 @task
-def deploy_with_venv(version='dev'):
-    """Rsync everything to server, pip installs as user and restarts apache"""
+def deploy_with_venv(directory='dev'):
+    """Install the current version to '~/dist/pcapi/releases/{directory}'"""
 
-    REMOTE_PATH = os.path.join ( '~/dist/pcapi', version )
+    local_path = './dist'
+    remote_path = '~/dist/pcapi/releases'
+    virtualenv_path = '{remote_path}/{directory}'.format(remote_path=remote_path, directory=directory)
 
-    local("""rsync -e"ssh -p%s" --exclude resources -C -av %s/ %s@%s:%s"""
-    % (env.port, CURRENT_PATH, env.user, env.host, REMOTE_PATH ) )
+    # Build the source distribution
+    local('python setup.py sdist --formats=gztar')
+    dist_name = local('python setup.py --fullname', capture=True)
+    dist_file = '{dist_name}.tar.gz'.format(dist_name=dist_name)
 
-    #create virtual environment
-    run("cd {0}; virtualenv --no-site-packages .".format(REMOTE_PATH))
-    run("cd {0}; ./bin/pip install -r etc/requirements.txt".format(REMOTE_PATH))
+    # Copy it to the server
+    local('scp -P {port} {local_path}/{dist_file} {username}@{host}:/tmp'
+        .format(local_path=local_path, dist_file=dist_file, username=env.user,
+                host=env.host, port=env.port))
+
+    # Initialize virtuelenv
+    with cd(remote_path):
+        run('virtualenv --no-site-packages {directory}'.format(remote_path, directory=directory))
+
+    # Install the pcapi in the virtualenv
+    with virtualenv(virtualenv_path):
+        run('pip install /tmp/{dist_file}'.format(dist_file=dist_file))
+
 
 def _config(var, section='install'):
     """ Read default values from fab.ini. Missing values are None """

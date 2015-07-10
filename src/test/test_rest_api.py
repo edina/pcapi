@@ -41,7 +41,7 @@ imagefilepath = config.get("test", "imagefile")
 editorfilepath = config.get("test", "editorfile")
 
 # the contents of the file are here (full path to local file)
-localfile = open ( textfilepath , "r")
+recordpayload = open ( textfilepath , "r").read()
 
 #schemafile = open ( schemafilepath , "r")
 
@@ -108,10 +108,10 @@ class TestDropboxFs(unittest.TestCase):
         #print "test_put_file"
         app.delete('/fs/dropbox/%s/lev1/lev2' % userid)
         # put first file at /lev1/lev2
-        resp = app.put('/fs/dropbox/%s/lev1/lev2' % userid, params=localfile.read() ).json
+        resp = app.put('/fs/dropbox/%s/lev1/lev2' % userid, params=recordpayload ).json
         self.assertEquals(resp["error"], 0 )
         #second put should overwrite the first
-        resp = app.put('/fs/dropbox/%s/lev1/lev2' % userid, params=localfile.read() ).json
+        resp = app.put('/fs/dropbox/%s/lev1/lev2' % userid, params=recordpayload ).json
         self.assertEquals(resp["path"], "/lev1/lev2")
 
     def test_post_file(self):
@@ -120,10 +120,10 @@ class TestDropboxFs(unittest.TestCase):
         #print "test_post_file"
         app.delete('/fs/dropbox/%s/lev1/' % userid)
         # post /lev1/lev2
-        resp = app.post('/fs/dropbox/%s/lev1/lev2' % userid, params=localfile.read() ).json
+        resp = app.post('/fs/dropbox/%s/lev1/lev2' % userid, params=recordpayload ).json
         self.assertEquals(resp["error"], 0 )
         #second post should transparently create /lev1/lev2 \(1)
-        resp = app.post('/fs/dropbox/%s/lev1/lev2' % userid, params=localfile.read() ).json
+        resp = app.post('/fs/dropbox/%s/lev1/lev2' % userid, params=recordpayload ).json
         self.assertEquals(resp["path"], "/lev1/lev2 (1)")
 
     def test_get_dir(self):
@@ -132,10 +132,10 @@ class TestDropboxFs(unittest.TestCase):
         #print "test_get_dir"
         app.delete('/fs/dropbox/%s/lev1/' % userid)
         # post /lev1/lev2
-        resp = app.post('/fs/dropbox/%s/lev1/lev2' % userid, params=localfile.read() ).json
+        resp = app.post('/fs/dropbox/%s/lev1/lev2' % userid, params=recordpayload ).json
         self.assertEquals(resp["error"], 0 )
         # Contents of /lev1/ should be the "/lev1/lev2" (always receives absolute paths)
-        resp = app.get('/fs/dropbox/%s/lev1' % userid, params=localfile.read() ).json
+        resp = app.get('/fs/dropbox/%s/lev1' % userid, params=recordpayload ).json
         self.assertEquals(resp["metadata"], ["/lev1/lev2",])
 
     def test_get_file(self):
@@ -153,7 +153,7 @@ class TestDropboxFs(unittest.TestCase):
         """ DELETE on /fs/ path deletes the file or directory """
         #print "test_delete_file"
         # put first file at /lev1/lev2
-        resp = app.put('/fs/dropbox/%s/lev1/lev2' % userid, params=localfile.read() ).json
+        resp = app.put('/fs/dropbox/%s/lev1/lev2' % userid, params=recordpayload ).json
         self.assertEquals(resp["error"], 0 )
         # Now delete it
         resp = app.delete('/fs/dropbox/%s/lev1/lev2' % userid ).json
@@ -170,7 +170,7 @@ class TestDropboxRecords(unittest.TestCase):
         #print "test_put_record"
         #cleanup
         app.delete('/records/dropbox/%s/myrecord/image.jpg' % userid)
-        resp = app.put('/records/dropbox/%s/myrecord/image.jpg' % userid, params=localfile.read() ).json
+        resp = app.put('/records/dropbox/%s/myrecord/image.jpg' % userid, params=recordpayload ).json
         self.assertEquals(resp["error"], 0)
         self.assertEquals(resp["path"], "/records/myrecord/image.jpg")
 
@@ -229,7 +229,7 @@ class TestDropboxRecords(unittest.TestCase):
         #cleanup EVERYTHING under /records/
         app.delete('/records/dropbox/%s//' % userid)
         # create the record
-        content = localfile.read()
+        content = recordpayload
         resp = app.post('/records/dropbox/%s/myrecord' % userid, params=content ).json
         self.assertEquals(resp["error"], 0)
         # GET specifying only recordname
@@ -342,7 +342,7 @@ class TestDropboxRecords(unittest.TestCase):
         #print "start test_filter_by_editor_id"
         app.delete('/records/dropbox/%s//' % userid)
         # create myrecord/record.json using BODY
-        content = localfile.read()
+        content = recordpayload
         resp = app.post('/records/dropbox/%s/myrecord' % userid, upload_files=[("file" , textfilepath )] ).json
         self.assertEquals(resp["error"], 0)
         # get its id:
@@ -416,6 +416,36 @@ class TestDropboxRecords(unittest.TestCase):
         resp = app.get(fp)
         self.assertEquals(resp.body , content)
 
+    def test_get_incomplete_record(self):
+        """ Get a record with a missing asset """
+
+        records_remote = '/records/incompleteaudio/record.json'
+        record_remote_path = '/records/dropbox/{0}/incompleteaudio'.format(userid)
+        record_remote_fspath = '/fs/dropbox/{0}{1}'.format(userid, records_remote)
+        record_local_path = os.path.join(config.get('test', 'test_resources'), 'test1')
+        record_json_path = '{0}/record.json'.format(record_local_path)
+        record_payload = open(record_json_path, 'r').read()
+
+        # Clean the record
+        app.delete(record_remote_path)
+
+        # Upload the record
+        resp = app.post(record_remote_path, params=record_payload)
+        self.assertEquals(resp.json["error"], 0)
+        self.assertEquals(resp.json["path"], records_remote)
+
+        # The record contains an audio asset that hasn't been uploaded
+
+        # It should be accessible via the fs call
+        resp = app.get(record_remote_fspath)
+        self.assertEquals(resp.body, record_payload)
+
+        # It shouldn't be accessible via the record call
+        resp = app.get(record_remote_path)
+        self.assertEquals(resp.json["error"], 1)
+        # self.assertEquals(resp.body, content)
+
+
 class TestDropboxEditors(unittest.TestCase):
     """
     Test: REST functions for /editors/dropbox API
@@ -423,7 +453,7 @@ class TestDropboxEditors(unittest.TestCase):
     ##### EDITORS ####
 
     def test_upload_editor(self):
-        resp = app.put('/editors/dropbox/%s/myeditor.edtr' % userid, params=localfile.read() ).json
+        resp = app.put('/editors/dropbox/%s/myeditor.edtr' % userid, params=recordpayload ).json
         self.assertEquals(resp["error"], 0)
         self.assertEquals(resp["path"], '/editors/myeditor.edtr' )
 
@@ -530,7 +560,7 @@ class TestDropboxBreak(unittest.TestCase):
     def test_provider(self):
         """ Bad spelling of dropbox provider should say "unsupported provider" """
         print "Issuing bad request for provider dropboxxx"
-        resp = app.get('/records/dropboxxxx/%s/' % userid, params=localfile.read() )
+        resp = app.get('/records/dropboxxxx/%s/' % userid, params=recordpayload )
         self.assertEquals(resp["error"], 1)
 
 class TestDropboxExport(unittest.TestCase):
@@ -542,7 +572,7 @@ class TestDropboxExport(unittest.TestCase):
         """Export a url to a file"""
         #print "test export"
         #create new record
-        put_resp = app.put('/records/dropbox/%s/myrecord/record.json' % userid, params=localfile.read() ).json
+        put_resp = app.put('/records/dropbox/%s/myrecord/record.json' % userid, params=recordpayload ).json
         self.assertEquals(put_resp["error"], 0)
         # export
         resp = app.get('/export/dropbox/%s/%s' % ( userid, put_resp["path"] ) ).json
@@ -562,7 +592,7 @@ class TestDropboxSync(unittest.TestCase):
         # get cursor
         cur_resp = app.get('/sync/dropbox/%s' % userid).json
         #create new record
-        put_resp = app.post('/records/dropbox/%s/myrecord' % userid, params=localfile.read() ).json
+        put_resp = app.post('/records/dropbox/%s/myrecord' % userid, params=recordpayload ).json
         self.assertEquals(put_resp["error"], 0)
         # get diffs
         diff_resp = app.get('/sync/dropbox/%s/%s' % ( userid, cur_resp["cursor"] ) ).json
@@ -579,7 +609,7 @@ class TestDropboxBackup(unittest.TestCase):
         app.delete('/records/dropbox/%s//' % userid)
         app.delete('/fs/dropbox/%s/records_backup/' % userid)
         #create new record
-        put_resp = app.post('/records/dropbox/%s/myrecord' % userid, params=localfile.read() ).json
+        put_resp = app.post('/records/dropbox/%s/myrecord' % userid, params=recordpayload ).json
         self.assertEquals(put_resp["error"], 0)
         # create backup
         backup_resp = app.get('/backup/dropbox/%s/records' % userid).json
@@ -646,7 +676,7 @@ class TestDropboxProvider(unittest.TestCase):
     def make_dirs(self, rec):
         self.dbox.mkdir("records/"+rec)
         #self.dbox.api_client.file_create_folder(rec)
-        #put_resp = app.post('/records/dropbox/%s/%s' % (userid, rec), params=localfile.read()).json
+        #put_resp = app.post('/records/dropbox/%s/%s' % (userid, rec), params=recordpayload).json
 
     def result(self, request, result):
         print "result is %s" % result
