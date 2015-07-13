@@ -5,7 +5,7 @@
 """
 For an explanation of each config. item see comments in resource/config.ini
 """
-from pcapi import version
+from pcapi import api_version
 from pkg_resources import resource_filename
 
 import ConfigParser
@@ -46,7 +46,7 @@ def getCCMap():
 config_paths = []
 conf_dir = os.path.join(home, '.pcapi')
 config_paths.append(os.path.join(conf_dir, 'pcapi.ini'))
-config_paths.append(os.path.join(conf_dir, str(version), 'pcapi.ini'))
+config_paths.append(os.path.join(conf_dir, api_version, 'pcapi.ini'))
 config_paths.append(os.path.join('.', 'pcapi.ini'))
 default_config_file = None
 

@@ -1,15 +1,14 @@
-from pcapi import version
 from setuptools import setup, find_packages
 
 setup(
     name="pcapi",
-    version='{0}.11'.format(version),
+    version='1.3.11',
     packages=find_packages('src'),
     package_dir={'': 'src'},
     include_package_data=True,
 
     package_data={
-        'pcapi': ['data/*',],
+        'pcapi': ['data/*'],
     },
 
     install_requires=['Wand==0.3.8',
