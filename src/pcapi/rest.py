@@ -508,10 +508,10 @@ class PCAPIRest(object):
         log.debug("Received %s request for userid : %s" % (method,userid));
         try:
             log.debug("data is None")
-            ext = False
-            log.debug(self.request.url)
+            #set by default that file is not html
+            isHTML = False
             if self.request.url.endswith(".edtr"):
-                ext = True
+                isHTML = True
 
             ######## GET url is a directory -> List Directories ########
             if method=="GET":
@@ -538,7 +538,7 @@ class PCAPIRest(object):
                                 headers[name] = value
                     if process:
                         log.debug('Processing record')
-                        body, status, headers = process(body, None, headers, ext)
+                        body, status, headers = process(body, None, headers, isHTML)
 
                     log.debug(headers)
 
@@ -580,7 +580,7 @@ class PCAPIRest(object):
                 else:
                     # if process is defined then pipe the body through process
                     if process:
-                        body, status, _ = process(self.request.body.read(), None, None, ext)
+                        body, status, _ = process(self.request.body.read(), None, None, isHTML)
 
                         if not str(status).startswith('200'):
                             return body
