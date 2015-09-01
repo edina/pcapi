@@ -273,16 +273,16 @@ class PCAPIRest(object):
                     if ( md.path() != path ):
                         ### moved a myrecord/record.json to a new folder anothername/record.json
                         newname = md.path()[md.path().rfind("/") + 1:]
-                        def proc(fp):
-                            j = json.loads(fp.read())
+                        def proc(body, status, headers):
+                            j = json.loads(body)
                             j["name"]=newname
                             log.debug("Name collision. Renamed record to: " + newname)
-                            return StringIO(json.dumps(j))
+                            return json.dumps(j), status, headers
                         cb = proc
                     else:
                         cb = None
                     path = md.path() + "/record.json"
-                    res = self.fs(provider, userid, path, cb)
+                    res = self.fs(provider, userid, path, process=cb)
 
                     # Sync to PostGIS database after processing with self.fs()
                     # (Path resolution already done for us so we can just put/overwrite the file)
@@ -541,8 +541,9 @@ class PCAPIRest(object):
 
                     # Update the headers and the status of the request
                     self.response.status = status
-                    for name, value in headers.iteritems():
-                        self.response[name] = value
+                    if headers:
+                        for name, value in headers.iteritems():
+                            self.response[name] = value
 
                     # Return the body
                     return body
@@ -559,25 +560,31 @@ class PCAPIRest(object):
                     log.debug("data not None")
                     # if process is defined then pipe the body through process
                     log.debug(data.filename)
+                    body = data.file.read()
+                    if process:
+                        body, _, _ = process(body, None, None)
                     if data.filename.lower().endswith(".jpg") or data.filename.lower().endswith(".jpeg"):
-                        body = data.file.read()
-                        fp = StringIO(body) if not process else process(data.file)
                         paths = path.split(".")
                         #give a new name to the resized image <name>_res.<extension>
-                        new_path = paths[0]+"_orig"+"."+paths[1]
+                        resized_path = path
+                        path = paths[0]+"_orig"+"."+paths[1]
                         thumb_path = paths[0]+"_thumb"+"."+paths[1]
-                        md = self.provider.upload(new_path, fp )
-                        self.resizeImage(body, path)
+                        self.resizeImage(body, resized_path)
                         self.createThumb(body, thumb_path)
-                    else:
-                        fp = StringIO(data.file.read()) if not process else process(data.file)
-                        md = self.provider.upload(path, fp )
+
+                    md = self.provider.upload(path, StringIO(body) )
                     return { "error": 0, "msg" : "File uploaded", "path":md.ls()}
                 else:
                     log.debug("data is None")
                     # if process is defined then pipe the body through process
-                    fp = self.request.body if not process else process(self.request.body)
-                    md = self.provider.upload(path, fp, overwrite=False)
+                    if process:
+                        body, status, _ = process(self.request.body.read(), None, None)
+
+                        if not str(status).startswith('200'):
+                            return body
+                    else:
+                        body = self.request.body.read()
+                    md = self.provider.upload(path, StringIO(body), overwrite=False)
                     return { "error": 0, "msg" : "File uploaded", "path":md.ls()}
             ####### DELETE file ############
             if method=="DELETE":
