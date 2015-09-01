@@ -215,7 +215,7 @@ class PCAPIRest(object):
             bulk = [ r.content for r in records_cache ]
             return {"records": bulk, "error": 0 }
 
-    def __process_record(self, body, status, headers):
+    def __process_record(self, body, status, headers, frmt=None):
         try:
             record = json.loads(body)
             log.debug(record)
@@ -368,19 +368,20 @@ class PCAPIRest(object):
         return {"error":1, "msg":"Unexpected error" }
 
     def __process_editor(self, body, status, headers, frmt=None):
-        validator = FormValidator(body)
-        headers = None
-        if validator.validate():
-            log.debug("valid html5")
-            if frmt == 'android':
-                log.debug('it s an android')
-                parser = COBWEBFormParser(body)
-                body = parser.extract()
-            status = '200 OK'
-        else:
-            log.debug("non valid html5")
-            body = { "error": 1, "msg" : "The editor is not valid"}
-            status = 403
+        valid_json = False
+        if frmt:
+            valid_json = True
+        status = '200 OK'
+
+        if valid_json == False:
+            log.debug(body)
+            validator = FormValidator(body)
+            if validator.validate():
+                log.debug("valid html5")
+            else:
+                log.debug("non valid html5")
+                body = { "error": 1, "msg" : "The editor is not valid"}
+                status = 403
 
         return body, status, headers
 
@@ -410,7 +411,7 @@ class PCAPIRest(object):
             self.provider.mkdir("/editors")
         # No subdirectories are allowed when accessing editors
         if re.findall("/editors//?[^/]*$",path):
-            process_editor_with_frmt = lambda body, status, headers: self.__process_editor(body, status, headers, frmt=flt)
+            process_editor_with_frmt = lambda body, status, headers, flt: self.__process_editor(body, status, headers, flt)
             res = self.fs(provider,userid,path,frmt=flt, process=process_editor_with_frmt)
 
             # If "GET /editors//" is reguested then add a "names" parameter
@@ -509,6 +510,11 @@ class PCAPIRest(object):
 
         log.debug("Received %s request for userid : %s" % (method,userid));
         try:
+            log.debug("data is None")
+            ext = None
+            log.debug(self.request.url)
+            if self.request.url.endswith(".json"):
+                ext = "json"
 
             ######## GET url is a directory -> List Directories ########
             if method=="GET":
@@ -535,7 +541,7 @@ class PCAPIRest(object):
                                 headers[name] = value
                     if process:
                         log.debug('Processing record')
-                        body, status, headers = process(body, None, headers)
+                        body, status, headers = process(body, None, headers, ext)
 
                     log.debug(headers)
 
@@ -575,7 +581,6 @@ class PCAPIRest(object):
                     md = self.provider.upload(path, StringIO(body) )
                     return { "error": 0, "msg" : "File uploaded", "path":md.ls()}
                 else:
-                    log.debug("data is None")
                     # if process is defined then pipe the body through process
                     if process:
                         body, status, _ = process(self.request.body.read(), None, None)
