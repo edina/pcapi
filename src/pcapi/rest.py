@@ -368,12 +368,9 @@ class PCAPIRest(object):
         return {"error":1, "msg":"Unexpected error" }
 
     def __process_editor(self, body, status, headers, frmt=None):
-        valid_json = False
-        if frmt:
-            valid_json = True
         status = '200 OK'
 
-        if valid_json == False:
+        if frmt == True:
             log.debug(body)
             validator = FormValidator(body)
             if validator.validate():
@@ -511,10 +508,10 @@ class PCAPIRest(object):
         log.debug("Received %s request for userid : %s" % (method,userid));
         try:
             log.debug("data is None")
-            ext = None
+            ext = False
             log.debug(self.request.url)
-            if self.request.url.endswith(".json"):
-                ext = "json"
+            if self.request.url.endswith(".edtr"):
+                ext = True
 
             ######## GET url is a directory -> List Directories ########
             if method=="GET":
@@ -583,7 +580,7 @@ class PCAPIRest(object):
                 else:
                     # if process is defined then pipe the body through process
                     if process:
-                        body, status, _ = process(self.request.body.read(), None, None)
+                        body, status, _ = process(self.request.body.read(), None, None, ext)
 
                         if not str(status).startswith('200'):
                             return body
