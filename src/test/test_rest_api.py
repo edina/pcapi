@@ -700,6 +700,163 @@ class TestDropboxProvider(unittest.TestCase):
     def tearDown(self):
         print self.i
 
+class TestFieldtripOpenWorkflow(unittest.TestCase):
+
+    def setUp(self):
+        self.provider_name = 'dropbox'
+        self.provider = dbox_provider.DropboxProvider()
+
+        # Use the gobal userid
+        self.userid = userid
+        self.load_test_resources()
+
+    # Some helper funcitons
+    def delete_record(self, record_name):
+        app.delete('/records/{0}/{1}/{2}'.format(self.provider_name, self.userid, record_name))
+
+    def upload_record(self, record_name, payload):
+        url = '/records/{0}/{1}/{2}'.format(self.provider_name, self.userid, record_name)
+        response = app.post(url, payload)
+        return response
+
+    def upload_record_asset(self, record_name, asset_name, payload):
+        url = '/records/{0}/{1}/{2}/{3}'.format(self.provider_name, self.userid, record_name, asset_name)
+        response = app.post(url, params=payload)
+        return response
+
+    def upload_test_editor_as(self, name, payload):
+        url = '/editors/{0}/{1}/{2}'.format(self.provider_name, self.userid, name)
+        response = app.put(url, params=payload)
+
+        return response
+
+    def load_test_resources(self):
+        self.test_record_name = 'Test 2 title'
+        self.test_image_name = '1414517099373.jpg'
+        self.test_editor_name = 'editor.edtr'
+
+        test_resources = config.get('test', 'test_resources')
+
+        record_local_path = os.path.join(test_resources, 'test 2')
+        record_json_path = '{0}/record.json'.format(record_local_path)
+        record_image_path = '{0}/{1}'.format(record_local_path, self.test_image_name)
+
+        self.test_record_payload = open(record_json_path, 'r').read()
+        self.test_image_payload = open(record_image_path, 'r').read()
+
+        editor_local_path = os.path.join(test_resources, self.test_editor_name)
+        self.test_editor_payload = open(editor_local_path, "r").read()
+
+    ## The tests
+
+    def test_login(self):
+        self.provider.login(self.userid)
+
+    def test_check_login(self):
+        url = '/auth/{0}/{1}'.format(self.provider_name, self.userid)
+        response = app.get(url).json
+        self.assertEquals(1, response['state'])
+
+    def test_list_editors(self):
+        # Upload one editor
+        self.upload_test_editor_as(self.test_editor_name, self.test_editor_payload)
+
+        # Get the list of editors
+        url = '/editors/{0}/{1}/'.format(self.provider_name, self.userid)
+        response = app.get(url).json
+        # Check for no errors
+        self.assertEquals(0, response['error'])
+        # Check for alt least one editor
+        self.assertGreater(len(response['metadata']), 0)
+        # Check for our editor
+        self.assertTrue('/editors/{0}'.format(self.test_editor_name) in response['metadata'])
+
+    def test_download_editor(self):
+        url = '/editors/{0}/{1}/{2}'.format(self.provider_name, self.userid, self.test_editor_name)
+        response = app.get(url)
+        self.assertEquals(response.body, self.test_editor_payload)
+
+    def test_upload_text_record(self):
+        record_name = 'testrec'
+        # Clear any preexisting test record (assume success)
+        app.delete('/records/{0}/{1}/{2}'.format(self.provider_name, self.userid, record_name))
+
+        # Upload the text record
+        url = '/records/{0}/{1}/{2}'.format(self.provider_name, self.userid, record_name)
+        response = app.post(url, recordpayload).json
+        # Check for no errors
+        self.assertEquals(0, response['error'])
+        # Check for the right path
+        self.assertEquals('/records/{0}/record.json'.format(record_name), response['path'])
+
+    def test_upload_image_record(self):
+        record_name = self.test_record_name
+        image_name = self.test_image_name
+        image_payload = self.test_image_payload
+        record_payload = self.test_record_payload
+
+        app.delete('/records/{0}/{1}/{2}'.format(self.provider_name, self.userid, record_name))
+
+        url = '/records/{0}/{1}/{2}'.format(self.provider_name, self.userid, record_name)
+        response = app.post(url, record_payload).json
+        # Check for no errors
+        self.assertEquals(0, response['error'])
+        # Check for the right path
+        self.assertEquals('/records/{0}/record.json'.format(record_name), response['path'])
+
+        url = '/records/{0}/{1}/{2}/{3}'.format(self.provider_name, self.userid, record_name, image_name)
+        app.post(url, params=image_payload)
+        # Check for no errors
+        self.assertEquals(0, response['error'])
+        # Check for is attached to the correct record
+        self.assertEquals('/records/{0}/record.json'.format(record_name), response['path'])
+
+    def test_upload_many_records(self):
+        record_name = self.test_record_name
+        image_name = self.test_image_name
+        image_payload = self.test_image_payload
+        record_payload = self.test_record_payload
+
+        # Composed function with asserts
+        def upload_record_and_asset(record_name):
+            response = self.upload_record(record_name, self.test_record_payload).json
+            # Check for no errors
+            self.assertEquals(0, response['error'])
+
+            response = self.upload_record_asset(record_name, self.test_image_name, self.test_image_payload).json
+            # Check for no errors
+            self.assertEquals(0, response['error'])
+
+        records = ['test_record_red', 'test_record_green', 'test_record_black',
+            'test_record_brown', 'test_record_magenta', 'test_record_orange']
+
+        map(self.delete_record, records)
+        map(upload_record_and_asset, records)
+
+        #Tidy up
+        map(self.delete_record, records)
+
+
+    def test_upload_same_name_records(self):
+        record_name = 'testrec'
+        record_name_1 = 'testrec (1)'
+        # Clear any preexisting test record (assume success)
+        app.delete('/records/{0}/{1}/{2}'.format(self.provider_name, self.userid, record_name))
+        app.delete('/records/{0}/{1}/{2}'.format(self.provider_name, self.userid, record_name_1))
+
+        # Upload a text record
+        url = '/records/{0}/{1}/{2}'.format(self.provider_name, self.userid, record_name)
+        app.post(url, self.test_record_payload).json
+        # Upload a record with the same name
+        url = '/records/{0}/{1}/{2}'.format(self.provider_name, self.userid, record_name)
+        response = app.post(url, self.test_record_payload).json
+        # Check for no errors
+        self.assertEquals(0, response['error'])
+        # it is expected to get a renamed record
+        self.assertEquals('/records/{0}/record.json'.format(record_name_1), response['path'])
+
+        #Tidy up
+        map(self.delete_record, [record_name, record_name_1])
 
 if __name__ == '__main__':
     unittest.main()
