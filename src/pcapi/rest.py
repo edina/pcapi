@@ -367,18 +367,17 @@ class PCAPIRest(object):
             return res
         return {"error":1, "msg":"Unexpected error" }
 
-    def __process_editor(self, body, status, headers, frmt=None):
+    def __validate_editor_as_html5(self, body, status, headers):
         status = '200 OK'
 
-        if frmt == True:
-            log.debug(body)
-            validator = FormValidator(body)
-            if validator.validate():
-                log.debug("valid html5")
-            else:
-                log.debug("non valid html5")
-                body = { "error": 1, "msg" : "The editor is not valid"}
-                status = 403
+        validator = FormValidator(body)
+        html = validator.validate()
+        if html:
+            log.debug("valid html5")
+        else:
+            log.debug("non valid html5")
+            body = { "error": 1, "msg" : "The editor is not valid"}
+            status = 403
 
         return body, status, headers
 
@@ -408,8 +407,12 @@ class PCAPIRest(object):
             self.provider.mkdir("/editors")
         # No subdirectories are allowed when accessing editors
         if re.findall("/editors//?[^/]*$",path):
-            process_editor_with_frmt = lambda body, status, headers, flt: self.__process_editor(body, status, headers, flt)
-            res = self.fs(provider,userid,path,frmt=flt, process=process_editor_with_frmt)
+            if self.request.url.endswith(".edtr"):
+                process = self.__validate_editor_as_html5
+            else:
+                process = None
+
+            res = self.fs(provider, userid, path, frmt=flt, process=process)
 
             # If "GET /editors//" is reguested then add a "names" parameter
             if path == "/editors//" and res["error"] == 0 and provider == "local" \
@@ -508,10 +511,6 @@ class PCAPIRest(object):
         log.debug("Received %s request for userid : %s" % (method,userid));
         try:
             log.debug("data is None")
-            #set by default that file is not html
-            isHTML = False
-            if self.request.url.endswith(".edtr"):
-                isHTML = True
 
             ######## GET url is a directory -> List Directories ########
             if method=="GET":
@@ -538,7 +537,7 @@ class PCAPIRest(object):
                                 headers[name] = value
                     if process:
                         log.debug('Processing record')
-                        body, status, headers = process(body, None, headers, isHTML)
+                        body, status, headers = process(body, None, headers)
 
                     log.debug(headers)
 
@@ -559,13 +558,15 @@ class PCAPIRest(object):
             if method=="POST":
                 # POST needs multipart/form-data because that's what phonegap supports (but NOT dropbox)
                 data = self.request.files.get('file')
+                status = '200 OK'
                 if data != None:
                     log.debug("data not None")
                     # if process is defined then pipe the body through process
                     log.debug(data.filename)
                     body = data.file.read()
                     if process:
-                        body, _, _ = process(body, None, None)
+                        body, status, _ = process(body, status, None)
+
                     if data.filename.lower().endswith(".jpg") or data.filename.lower().endswith(".jpeg"):
                         paths = path.split(".")
                         #give a new name to the resized image <name>_res.<extension>
@@ -574,14 +575,15 @@ class PCAPIRest(object):
                         thumb_path = paths[0]+"_thumb"+"."+paths[1]
                         self.resizeImage(body, resized_path)
                         self.createThumb(body, thumb_path)
-
-                    md = self.provider.upload(path, StringIO(body) )
-                    return { "error": 0, "msg" : "File uploaded", "path":md.ls()}
+                    if str(status).startswith('200'):
+                        md = self.provider.upload(path, StringIO(body) )
+                        return { "error": 0, "msg" : "File uploaded", "path":md.ls()}
+                    else:
+                        return body
                 else:
                     # if process is defined then pipe the body through process
                     if process:
-                        body, status, _ = process(self.request.body.read(), None, None, isHTML)
-
+                        body, status, _ = process(self.request.body.read(), status, None)
                         if not str(status).startswith('200'):
                             return body
                     else:
