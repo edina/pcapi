@@ -72,11 +72,11 @@ def editors(provider, userid, path="/"):
 def surveys(provider, userid, survey=None):
     return PCAPIRest(request,response).surveys(provider, userid, survey)
 
-###  /layers/... API ###
+###  /features/... API ###
 
 @route('/features/<provider>/<userid>/',method=["GET","POST","PUT","DELETE"] )
 @route('/features/<provider>/<userid>/<path:path>',method=["GET","POST","PUT","DELETE"] )
-def layers(provider, userid, path="/"):
+def features(provider, userid, path="/"):
     return PCAPIRest(request,response).features(provider, userid, path)
 
 ###  /fs/... API ###

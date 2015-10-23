@@ -65,7 +65,7 @@ class TestAuthoringTool(unittest.TestCase):
         /sync/local/testemail@domain.com/123456789
 
     Post mbtiles/kml (POST):
-        /layers/local/testemail@domain.com/dyfi.mbtiles
+        /features/local/testemail@domain.com/dyfi.mbtiles
     """
     ########### GET EDITORS ###########
 
@@ -166,7 +166,25 @@ class TestAuthoringTool(unittest.TestCase):
         diff_resp = app.get(url).json
         self.assertEquals( diff_resp["updated"] , [u'/records/myrecord/record.json'] )
 
-    #@unittest.skip("skipping setup")
+    @unittest.skip("WIP test_public_editors_layers")
+    def test_editors_interface(self):
+        """ This is to test the new /editors/ -> /fs/ schema as described in
+        https://github.com/cobweb-eu/cobweb/issues/166
+        """
+        # Post editor
+        ## /editors/local/UUID/SID/XXX -> /SID/records/NAME/record.json 
+        editor = editorfile.read()
+        SID = "BADBEEF"
+        extra_resource = localfile.read() #eg an image or Decision Tree
+
+        url='/editors/{0}/{1}/{2}'.format(provider,userid,SID)
+        resp = app.put(url, params=editor).json
+        print `resp`
+        url='/editors/{0}/{1}/{2}'.format(provider,userid,SID)
+        resp = app.put(url, params=extra_resource).json
+        print `resp`
+
+    #@unittest.skip("skipping test")
     def test_public_editors_layers(self):
         """  Put an overlay and an editor with public=true and see if they are copied
         over to the public folder"""
@@ -174,7 +192,7 @@ class TestAuthoringTool(unittest.TestCase):
         # create public layer mylayer.
         layer = localfile.read()
         # NOTE: public=true
-        url='/layers/{0}/{1}/mylayer.kml?public=true'.format(provider,userid)
+        url='/features/{0}/{1}/mylayer.kml?public=true'.format(provider,userid)
         resp = app.put(url, params=layer).json
         print `resp`
         self.assertEquals(resp["error"], 0 )
