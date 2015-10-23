@@ -1,4 +1,4 @@
-Personal Cloud API
+Personal Cloud API [![Build Status](https://travis-ci.org/cobweb-eu/pcapi.svg?branch=master)](https://travis-ci.org/cobweb-eu/pcapi)
 ==================
 
 PCAPI is a **storage middleware** that abstracts access to Cloud Storage providers in addition to its own local storage. Authentication to external providers like e.g. Dropbox is based on oAuth.
