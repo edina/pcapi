@@ -69,7 +69,6 @@ class TestAuthoringTool(unittest.TestCase):
     """
     ########### GET EDITORS ###########
 
-    #@unittest.skip("skipping setup")
     def test_post_editor(self):
         """  post an editor """
         url='/fs/{0}/{1}/editors/test.edtr'.format(provider,userid)
@@ -84,11 +83,15 @@ class TestAuthoringTool(unittest.TestCase):
 
     def test_get_all_editors(self):
         """  Get all Editors """
+        self.test_post_editor() #prereq
         url='/editors/{0}/{1}/'.format(provider,userid)
         resp = app.get(url).json
         self.assertEquals(resp["error"], 0 )
-        self.assertTrue("test.edtr" in resp["metadata"])
-        self.assertTrue("My Survey Title" in resp["names"])
+        try:
+            self.assertTrue("test.edtr" in resp["metadata"])
+            self.assertTrue("My Survey Title" in resp["names"])
+        except:
+            print "Assertion failed. Got: %s" % `resp`
     ########### GET RECORDS ###########
 
     def test_post_record(self):
