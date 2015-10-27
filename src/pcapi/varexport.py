@@ -141,8 +141,8 @@ def export(path):
                
                 if plat == -1000:
                    
-                    plat=coord[0]
-                    plon=coord[1]
+                    plat=coord[1]
+                    plon=coord[0]
                     timeSt=feat[PROP][TIMES]
                 else:
                     prop=feat[PROP]
@@ -172,8 +172,8 @@ def export(path):
                     compass[AZIMUTH],compass[PITCH],compass[ROLL],prop[LS],coord[0],coord[1],mkX,mkY,polyline,temperature,pressure))
             else:
                 for crd in coord[0]:
-                    lat=crd[0]
-                    lon=crd[1]
+                    lat=crd[1]
+                    lon=crd[0]
                     polyCoord.append(ppygis.Point(lon, lat))   
    
         fcProp=geojflood[PROP]
