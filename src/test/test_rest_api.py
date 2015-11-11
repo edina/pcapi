@@ -1,3 +1,4 @@
+# coding=utf-8
 # Unit test for the DropboxProvider REST API   #
 ###############################################
 
@@ -384,8 +385,13 @@ class TestDropboxRecords(unittest.TestCase):
             '/records/dropbox/{0}/myrecord'.format(userid),
             upload_files=[("file", textfilepath)]).json
         self.assertEquals(resp["error"], 0)
-        print textfilepath
-        print resp
+
+        # test csv export with non ascii
+        uni = os.path.join(config.get('test', 'test_resources'), 'unicode.rec')
+        resp = app.post(
+            '/records/dropbox/{0}/urecord'.format(userid),
+            upload_files=[("file", uni)])
+
         resp = app.get(
             '/records/dropbox/{0}/'.format(userid),
             params={
@@ -394,7 +400,8 @@ class TestDropboxRecords(unittest.TestCase):
         )
 
         self.assertEquals(resp.status, '200 OK')
-        self.assertGreater(len(resp.body), 0)
+        self.assertEquals(len(resp.body.split('\n')), 5)
+        self.assertTrue(u'ááâäèéëûü' in unicode(resp.body, "utf-8"))
 
     def test_null_fields(self):
         # ensure null audio and assets records fields are accepted

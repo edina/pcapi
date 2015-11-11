@@ -1,4 +1,3 @@
-import csv
 import json
 import os
 import re
@@ -25,6 +24,7 @@ from pcapi.form_validator import FormValidator, Editor
 from pcapi.cobweb_parser import COBWEBFormParser
 from pcapi.exceptions import DBException, FsException
 from pcapi.publish import postgis, geonetwork
+from pcapi.utils.writers import UnicodeWriter
 
 log = logtool.getLogger("PCAPIRest", "pcapi")
 #global number of threads
@@ -754,7 +754,7 @@ class PCAPIRest(object):
         temp = tempfile.NamedTemporaryFile(prefix='export_', suffix='.csv', dir=os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', '..', '..', 'tmp'), delete=False)
         log.debug(temp.name)
         with open(temp.name, "w") as file:
-            csv_file = csv.writer(file)
+            csv_file = UnicodeWriter(file)
             i=0
             editor = ""
             new_records = []
@@ -789,7 +789,7 @@ class PCAPIRest(object):
                 alt = 0
                 if len(record["geometry"]["coordinates"]) > 2:
                     alt = record["geometry"]["coordinates"][2]
-                fields = [record["name"], record["properties"]["timestamp"], record["geometry"]["coordinates"][0], record["geometry"]["coordinates"][1], alt]
+                fields = [record["name"], record["properties"]["timestamp"], str(record["geometry"]["coordinates"][0]), str(record["geometry"]["coordinates"][1]), str(alt)]
 
                 ## TODO: Remove those ugly ad-hoc checks. The Mobile app should submit records with same length and at the same order.
                 all_fields = [ x[0] for x in field_headers ]
@@ -802,18 +802,14 @@ class PCAPIRest(object):
                     found_field_value = False
                     # check if field exists in record
                     for f in record["properties"]["fields"]:
-                        if str(f["id"]) == field:
-                            #bingo
+                        fid = unicode(f["id"])
+                        if fid == field:
                             found_field_value = True
-                            #log.debug("Found value %s = %s" % (`f["id"]`, `f["val"]` ))
-                            if "fieldcontain-image" in str(f["id"]):
-                                fields.append("http://%s/1.3/pcapi/records/dropbox/%s/%s/%s" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], str(f["val"])))
-                            elif "fieldcontain-track" in str(f["id"]):
-                                fields.append("http://%s/1.3/pcapi/records/dropbox/%s/%s/%s" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], str(f["val"])))
-                            elif "fieldcontain-audio" in str(f["id"]):
-                                fields.append("http://%s/1.3/pcapi/records/dropbox/%s/%s/%s" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], str(f["val"])))
+                            fval = unicode(f["val"])
+                            if fid in ["fieldcontain-track", "fieldcontain-audio", "fieldcontain-image"]:
+                                fields.append("http://%s/1.3/pcapi/records/dropbox/%s/%s/%s" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], fval))
                             else:
-                                fields.append(str(f["val"]))
+                                fields.append(fval)
                     if not found_field_value:
                         # append empty string if not field is not found in record
                         fields.append("")
