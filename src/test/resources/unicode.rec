@@ -1,0 +1,22 @@
+{
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      -3.2004121873975215,
+      55.94664379950857
+    ]
+  },
+  "properties": {
+    "editor": "text.edtr",
+    "fields": [
+      {
+        "id": "fieldcontain-textarea-1",
+        "val": "ááâäèéëûü",
+        "label": "Description"
+      }
+    ],
+    "timestamp": "2015-11-10T14:25:46.806Z"
+  },
+  "name": "Text (10-11-2015 14h25m13s)"
+}
