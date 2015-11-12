@@ -711,10 +711,13 @@ class PCAPIRest(object):
             for record in r.content.itervalues():
                 description = "editor: %s\n timestamp: %s\n" %(record["properties"]["editor"], record["properties"]["timestamp"])
                 for f in record["properties"]["fields"]:
+                    flabel = unicode(f["label"])
+                    fid = unicode(f["id"])
+                    fval = unicode(f["val"])
                     if "fieldcontain-image" in str(f["id"]):
-                        description += "%s: %s\n" % (str(f["label"]), "<img src='http://%s/1.3/pcapi/records/dropbox/%s/%s/%s' >" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], str(f["val"])))
+                        description += "%s: %s\n" % (flabel, "<img src='http://%s/1.3/pcapi/records/dropbox/%s/%s/%s' >" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], fval))
                     else:
-                        description += "%s: %s\n" % (str(f["label"]), str(f["val"]))
+                        description += "%s: %s\n" % (flabel, fval)
                 log.debug(description)
                 pnt = kml.newpoint(name=record["name"], description=description, coords=[(record["geometry"]["coordinates"][0], record["geometry"]["coordinates"][1])])
 
@@ -817,7 +820,11 @@ class PCAPIRest(object):
                         if fid == field:
                             found_field_value = True
                             fval = unicode(f["val"])
-                            if fid in ["fieldcontain-track", "fieldcontain-audio", "fieldcontain-image"]:
+                            if "fieldcontain-image" in fid:
+                                fields.append("http://%s/1.3/pcapi/records/dropbox/%s/%s/%s" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], fval))
+                            elif "fieldcontain-track" in fid:
+                                fields.append("http://%s/1.3/pcapi/records/dropbox/%s/%s/%s" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], fval))
+                            elif "fieldcontain-audio" in fid:
                                 fields.append("http://%s/1.3/pcapi/records/dropbox/%s/%s/%s" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], fval))
                             else:
                                 fields.append(fval)
