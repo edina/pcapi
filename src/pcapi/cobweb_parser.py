@@ -18,7 +18,7 @@ class COBWEBFormParser:
         NOTE: survey name should be in source html as <form data-title="Some Title">        
         """
         if self.content:
-            soup = BeautifulSoup(self.content, "html5lib")
+            soup = BeautifulSoup(self.content, "html5lib", from_encoding="utf-8")
             try:
                 res = soup.form["data-title"]
             except KeyError:
@@ -29,7 +29,7 @@ class COBWEBFormParser:
 
     def _get_dict_from_html(self):
         if self.content:
-            soup = BeautifulSoup(self.content, "html5lib")
+            soup = BeautifulSoup(self.content, "html5lib", from_encoding="utf-8")
             finds = soup.find_all('div', attrs={'class': 'fieldcontain'})
             return {"type": "auth", "graph": self._get_elements(finds)}
         else:
@@ -95,7 +95,11 @@ class COBWEBFormParser:
         return element
 
 if __name__ == "__main__":
-    f = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'test', 'resources', 'sample.html')
+    import sys
+    #f = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'test', 'resources', 'sample.html')
+    f = sys.argv[1]
+    print `f`
     with open(f, 'rb') as f:
         parser = COBWEBFormParser(f)
-        print parser.extract()
+        #print parser.extract()
+        print parser.get_survey()
