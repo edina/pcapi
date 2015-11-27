@@ -967,6 +967,8 @@ class PCAPIRest(object):
             for x in records_cache:
                 for key, r in x.content.iteritems():
                     for field in r["properties"]["fields"]:
+                        if 'val' not in field.keys() or field['val'] is None:
+                            continue
                         if self.check_extension(exts, field["val"]):
                             if frmt:
                                 x.content = "%s/%s" % (key, field["val"])
@@ -982,6 +984,8 @@ class PCAPIRest(object):
             for x in records_cache:
                 for key, r in x.content.iteritems():
                     for field in r["properties"]["fields"]:
+                        if 'val' not in field.keys() or field['val'] is None:
+                            continue
                         if self.check_extension(exts, field["val"]):
                             with open(os.path.join(dirpath, field["val"]), "w") as f:
                                 try:
