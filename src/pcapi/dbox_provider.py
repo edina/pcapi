@@ -249,7 +249,15 @@ class DropboxProvider(object):
 
     def exists(self, path):
         """ Check if path exists """
-        return True # not used
+        try:
+            self.api_client.metadata(path)
+        except rest.ErrorResponse as error:
+            if error.status == 404:
+                return False
+            else:
+                raise Exception(error.error_msg)
+
+        return True
 
     def mkdir(self, path):
         """ Wrapper call around create_folder. Returns metadata.
