@@ -583,6 +583,41 @@ class TestDropboxExport(unittest.TestCase):
         self.assertEquals( resp["error"] , 0 )
         self.assertTrue ( resp["url"].startswith("http://") )
 
+    def test_export_skipping_assets_with_null_values(self):
+        """ If the val is null or not present the field should be skipped """
+
+        resources_path = config.get('test', 'test_resources')
+
+        # Upload record with null fields
+        filename = 'nullfields'
+        path = '/records/dropbox/{0}/{1}'.format(userid, filename)
+        record = os.path.join(resources_path, '{0}.json'.format(filename))
+        app.delete(path)
+        app.post(path, upload_files=[('file', record)])
+
+        # Upload record with image
+        record_name = 'test 2'
+        record_path = os.path.join(resources_path, record_name, 'record.json')
+        path = '/records/dropbox/{0}/{1}'.format(userid, record_name)
+        app.delete(path)
+        app.post(path, upload_files=[('file', record_path)])
+
+        image_name = '1414517099373.jpg'
+        image_relative_path = os.path.join(record_name, image_name)
+        image_path = os.path.join(resources_path, image_relative_path)
+        path = '/records/dropbox/{0}/{1}/{2}'\
+            .format(userid, record_name, image_name)
+        app.post(path, upload_files=[('file', image_path)])
+        export_url = \
+            '/records/dropbox/{0}/assets/images/?frmt=url'.format(userid)
+        resp = app.get(export_url)
+
+        # Test that we are getting no errors
+        self.assertEquals(resp.status, '200 OK')
+
+        # Test that we are getting al leat the image from our second record
+        self.assertTrue(image_relative_path in resp.json['records'])
+
 
 class TestDropboxSync(unittest.TestCase):
     """
