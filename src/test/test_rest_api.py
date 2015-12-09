@@ -290,24 +290,6 @@ class TestDropboxRecords(unittest.TestCase):
         resp = app.get('/records/dropbox/%s/' % userid, params={ "filter":"editor","id": eid}).json
         self.assertEquals(resp["error"], 0)
 
-    def test_resize_image(self):
-
-        app.delete('/records/dropbox/%s/myrecord' % userid)
-        resp = app.post('/records/dropbox/%s/myrecord' % userid, upload_files=[("file" , textfilepath )] ).json
-        self.assertEquals(resp["error"], 0)
-        resp = app.post('/records/dropbox/%s/myrecord/myimage.jpg' % userid, upload_files=[("file" , imagefilepath)] ).json
-        self.assertEquals(resp["error"], 0)
-        resp = app.get('/records/dropbox/%s/myrecord/myimage.jpg' % userid )
-        from wand.image import Image
-        with Image(blob=resp.body) as img:
-            self.assertEquals(img.width, 480)
-
-        #check for original image size
-        resp = app.get('/records/dropbox/%s/myrecord/myimage_orig.jpg' % userid )
-        from wand.image import Image
-        with Image(blob=resp.body) as img:
-            self.assertEquals(img.width, 640)
-
     def test_filter_by_mediatype(self):
         app.delete('/records/dropbox/%s/myrecord' % userid)
         resp = app.post('/records/dropbox/%s/myrecord' % userid, upload_files=[("file" , textfilepath )] ).json

@@ -1,3 +1,4 @@
+import base64
 import csv
 import json
 import os
@@ -13,7 +14,6 @@ import zipfile
 from bottle import Response, abort, static_file
 from StringIO import StringIO
 from operator import itemgetter
-from wand.image import Image
 
 try:
     import threadpool
@@ -304,24 +304,24 @@ class PCAPIRest(object):
                 return {"error":1 , "msg": str(e)}
 
     def surveys(self, provider, userid, sid):
-        """ This is the new version of editors API for COBWEB which will eventually 
+        """ This is the new version of editors API for COBWEB which will eventually
         replace /editors/.
-       
+
         GET /surveys/local/UUID
-        A GET request for all editors (path=/) will query geonetwork and return 
+        A GET request for all editors (path=/) will query geonetwork and return
         all surveys with their names eg.
         {
             "metadata": [ "b29c63ae-adc6-4732", "c8942133-22ce-4f93" ],
             "names": ["Another Woodlands Survey", "Grassland survey"]
         }
-        
+
         GET /surveys/local/UUID/SURVEYID
         Will return the survey (editor) file contents after querying geonetwork for it
         """
         log.debug('survey({0}, {1}, {2})'.format(provider, userid, sid))
 
         surveys = geonetwork.get_surveys(userid)
-        
+
         if not sid:
             # Return all registered surveys
             return surveys.get_summary_ftopen()
@@ -339,18 +339,18 @@ class PCAPIRest(object):
 
     def editors(self, provider, userid, path, flt):
         """ Normally this is just a shortcut for /fs/ calls to the /editors directory.
-        
+
         A GET request for all editors (path=/) should parse each editor and
         return their names (s.a. documentation).
-        
-        When called with public=true, then PUT/POST requests will also apply to 
+
+        When called with public=true, then PUT/POST requests will also apply to
         the public folder (as defined in pcapi.ini).
 
         In the future this call will be obsolete by surveys. We are keeping this
         for compatibility with non-COBWEB users who don't want to depend on geonetwork,
          SAML overrides, geoserver etc.
         """
-        
+
         error = self.auth(provider,userid)
         if (error):
             return error
@@ -364,7 +364,7 @@ class PCAPIRest(object):
         # No subdirectories are allowed when accessing editors
         if re.findall("/editors//?[^/]*$",path):
             res = self.fs(provider,userid,path,frmt=flt)
-            
+
             # If "GET /editors//" is reguested then add a "names" parameter
             if path == "/editors//" and res["error"] == 0 and provider == "local" \
                 and self.request.method == "GET":
@@ -383,13 +383,13 @@ class PCAPIRest(object):
                         names.append(None)
                 log.debug(`names`)
                 res["names"] = names
-                
+
                 # we convert /editors//XXX.whatever as XXX.whatever
                 # TODO: when editors become json, put decision trees inside the editor file
                 # and remove all filename extensions (like in /surveys/)
                 res["metadata"] = [ re.sub(r'/editors//?(.*)', r'\1', x) for x in res["metadata"] ]
 
-            ## If public==true then execute the same PUT/POST command to the 
+            ## If public==true then execute the same PUT/POST command to the
             ## public UUID (s. pcapi.ini) and return that result
             elif provider == "local" and \
             ( self.request.method == "PUT" or self.request.method == "POST"):
@@ -408,7 +408,7 @@ class PCAPIRest(object):
         """ High level layer (overlay) functions. Normally it is a shortcut to
         /fs/ for the /layers folder.
 
-        When called with public=true, then ALL requests will also apply to 
+        When called with public=true, then ALL requests will also apply to
         the public folder (as defined in pcapi.ini).
 
         """
@@ -422,7 +422,7 @@ class PCAPIRest(object):
         # No subdirectories are allowed when accessing features
         if re.findall("/features//?[^/]*$",path):
             res = self.fs(provider,userid,path)
-            ## If public==true then execute the same command to the 
+            ## If public==true then execute the same command to the
             ## public UUID (s. pcapi.ini) and return that result
             try:
                 public = self.request.GET.get("public")
@@ -449,7 +449,7 @@ class PCAPIRest(object):
         """
         #url unquote does not happend automatically
         path = urllib2.unquote(path)
-        
+
         log.debug('fs( %s, %s, %s, %s, %s)' % (provider, userid, path, process, frmt) )
 
         #TODO: make a ProviderFactory class once we have >2 providers
@@ -528,29 +528,20 @@ class PCAPIRest(object):
                 # POST needs multipart/form-data because that's what phonegap supports (but NOT dropbox)
                 data = self.request.files.get('file')
                 if data != None:
-                    log.debug("data not None")
-                    # if process is defined then pipe the body through process
-                    log.debug(data.filename)
-                    if data.filename.lower().endswith(".jpg") or data.filename.lower().endswith(".jpeg"):
-                        body = data.file.read()
-                        fp = StringIO(body) if not process else process(data.file)
-                        paths = path.split(".")
-                        #give a new name to the resized image <name>_res.<extension>
-                        new_path = paths[0]+"_orig"+"."+paths[1]
-                        thumb_path = paths[0]+"_thumb"+"."+paths[1]
-                        md = self.provider.upload(new_path, fp )
-                        self.resizeImage(body, path)
-                        self.createThumb(body, thumb_path)
-                    else:
-                        fp = StringIO(data.file.read()) if not process else process(data.file)
-                        md = self.provider.upload(path, fp )
-                    return { "error": 0, "msg" : "File uploaded", "path":md.ls()}
+                    log.debug("process multipart form-data. fn: {0}".format(data.filename))
+                    fp = StringIO(data.file.read()) if not process else process(data.file)
                 else:
-                    log.debug("data is None")
-                    # if process is defined then pipe the body through process
-                    fp = self.request.body if not process else process(self.request.body)
-                    md = self.provider.upload(path, fp, overwrite=False)
-                    return { "error": 0, "msg" : "File uploaded", "path":md.ls()}
+                    log.debug("process request body")
+                    isb64 = self.request.GET.get('base64')
+                    if isb64 == 'true':
+                        body = StringIO(base64.b64decode(self.request.body.read()))
+                        fp = body if not process else process(body)
+                    else:
+                        # if process is defined then pipe the body through process
+                        fp = self.request.body if not process else process(self.request.body)
+
+                md = self.provider.upload(path, fp, overwrite=False)
+                return { "error": 0, "msg" : "File uploaded", "path":md.ls()}
             ####### DELETE file ############
             if method=="DELETE":
                 md = self.provider.file_delete(path)
@@ -688,7 +679,7 @@ class PCAPIRest(object):
         self.response.headers['Content-Type'] = 'application/json'
         features = []
         for r in records:
-            #log.debug(r.content)        
+            #log.debug(r.content)
             # get first -and only- value of dictionary because records are an array of
             # [ { <name> : <geojson feature> } ....]
             f = r.content.values()[0]
@@ -801,22 +792,6 @@ class PCAPIRest(object):
         f.close()
         os.remove(temp.name)
         return d
-
-    def resizeImage(self, fp, path):
-        """ method for resizing images. I decided to keep 480px as absolute size for the images to be resized"""
-        with Image(blob=fp) as img:
-            log.debug(img.size)
-            img.resize(480, img.height*480/img.width)
-            #upload the resized image
-            self.provider.upload(path, StringIO(img.make_blob()) )
-
-    def createThumb(self, fp, path):
-        """ method for resizing images. I decided to keep 480px as absolute size for the images to be resized"""
-        with Image(blob=fp) as img:
-            log.debug(img.size)
-            img.resize(100, 100)
-            #upload the resized image
-            self.provider.upload(path, StringIO(img.make_blob()) )
 
     def filter_data(self, filters, path, userid):
         records_cache = self.rec_cache
