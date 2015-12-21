@@ -213,7 +213,8 @@ class TestMobileApp(unittest.TestCase):
         app.delete(url).json
 
         # create new record
-        url = '/records/{0}/{1}/myrecord'.format(provider, userid)
+        rname = 'myrecord'
+        url = '/records/{0}/{1}/{2}'.format(provider, userid, rname)
         resp = app.post(url, params=localfile.read()).json
         self.assertEquals(resp['error'], 0)
 
@@ -223,13 +224,19 @@ class TestMobileApp(unittest.TestCase):
                         upload_files=[('file' , imagefilepath)] ).json
         self.assertEquals(resp['error'], 0)
         self.assertEquals(resp['msg'], 'File uploaded')
-        self.assertEquals(resp['path'], '/records/myrecord/{0}'.format(bfname))
+        self.assertEquals(resp['path'], '/records/{0}/{1}'.format(rname, bfname))
 
         # post base64 string (based on encoding of test image)
+        sfname = 'imageb64.jpg'
         with open(imagefilepath, 'r') as f:
-            sfname = 'imageb64.jpg'
             out = base64.b64encode(f.read())
             resp = app.post('{0}/{1}?base64=true'.format(url, sfname), params=out).json
             self.assertEquals(resp['error'], 0)
             self.assertEquals(resp['msg'], 'File uploaded')
-            self.assertEquals(resp['path'], "/records/myrecord/{0}".format(sfname))
+            self.assertEquals(resp['path'], '/records/{0}/{1}'.format(rname, sfname))
+
+        # verify both files have same size
+        d = os.path.join(config.get("path", 'data_dir'), userid, 'records', rname)
+        self.assertEquals(
+            os.stat(os.path.join(d, bfname)).st_size,
+            os.stat(os.path.join(d, sfname)).st_size)
