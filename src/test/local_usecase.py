@@ -8,6 +8,7 @@ Local provider has no oauth implementation yet. User will just need to:
 2. PUT/POST before "reading" anything. No user directory is created unless
    something is uploaded.
 """
+import base64
 import os
 import sys
 import unittest
@@ -72,7 +73,7 @@ class TestAuthoringTool(unittest.TestCase):
     def test_post_editor(self):
         """  post an editor """
         url='/fs/{0}/{1}/editors/test.edtr'.format(provider,userid)
-        editor = editorfile.read() 
+        editor = editorfile.read()
         resp = app.post(url, params=editor).json
         self.assertEquals(resp["error"], 0 )
         # Contents of /editors/ should be the "/editors/test.edtr" (always receives absolute paths)
@@ -175,7 +176,7 @@ class TestAuthoringTool(unittest.TestCase):
         https://github.com/cobweb-eu/cobweb/issues/166
         """
         # Post editor
-        ## /editors/local/UUID/SID/XXX -> /SID/records/NAME/record.json 
+        ## /editors/local/UUID/SID/XXX -> /SID/records/NAME/record.json
         editor = editorfile.read()
         SID = "BADBEEF"
         extra_resource = localfile.read() #eg an image or Decision Tree
@@ -191,7 +192,7 @@ class TestAuthoringTool(unittest.TestCase):
     def test_public_editors_layers(self):
         """  Put an overlay and an editor with public=true and see if they are copied
         over to the public folder"""
-        
+
         # create public layer mylayer.
         layer = localfile.read()
         # NOTE: public=true
@@ -204,3 +205,38 @@ class TestAuthoringTool(unittest.TestCase):
         # NOTE: public=true
         url='/editors/{0}/{1}/mylayer.kml?public=true'.format(provider,userid)
         resp = app.put(url, params=editor).json
+
+
+class TestMobileApp(unittest.TestCase):
+    def test_image_upload(self):
+        url = '/records/{0}/{1}//'.format(provider, userid)
+        app.delete(url).json
+
+        # create new record
+        rname = 'myrecord'
+        url = '/records/{0}/{1}/{2}'.format(provider, userid, rname)
+        resp = app.post(url, params=localfile.read()).json
+        self.assertEquals(resp['error'], 0)
+
+        # post binary image
+        bfname = 'image.jpg'
+        resp = app.post('{0}/{1}'.format(url, bfname),
+                        upload_files=[('file' , imagefilepath)] ).json
+        self.assertEquals(resp['error'], 0)
+        self.assertEquals(resp['msg'], 'File uploaded')
+        self.assertEquals(resp['path'], '/records/{0}/{1}'.format(rname, bfname))
+
+        # post base64 string (based on encoding of test image)
+        sfname = 'imageb64.jpg'
+        with open(imagefilepath, 'r') as f:
+            out = base64.b64encode(f.read())
+            resp = app.post('{0}/{1}?base64=true'.format(url, sfname), params=out).json
+            self.assertEquals(resp['error'], 0)
+            self.assertEquals(resp['msg'], 'File uploaded')
+            self.assertEquals(resp['path'], '/records/{0}/{1}'.format(rname, sfname))
+
+        # verify both files have same size
+        d = os.path.join(config.get("path", 'data_dir'), userid, 'records', rname)
+        self.assertEquals(
+            os.stat(os.path.join(d, bfname)).st_size,
+            os.stat(os.path.join(d, sfname)).st_size)
