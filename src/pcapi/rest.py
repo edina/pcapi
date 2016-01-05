@@ -10,7 +10,7 @@ import urllib2
 import time
 import zipfile
 
-from bottle import Response, abort, static_file
+from bottle import static_file
 from StringIO import StringIO
 from operator import itemgetter
 from wand.image import Image
@@ -20,10 +20,10 @@ try:
 except ImportError:
     sys.stderr.write("Error: Can't find threadpool...")
 
-from pcapi import ogr, dbox_provider, fs_provider, logtool, config
-from pcapi.form_validator import FormValidator, Editor
+from pcapi import ogr, fs_provider, logtool
+from pcapi.form_validator import Editor
 from pcapi.cobweb_parser import COBWEBFormParser
-from pcapi.exceptions import DBException, FsException
+from pcapi.exceptions import FsException
 from pcapi.publish import postgis, geonetwork
 
 log = logtool.getLogger("PCAPIRest", "pcapi")
@@ -35,30 +35,6 @@ class Record(object):
     def __init__(self, content, metadata ):
         self.content = content # as a parsed json (dict)
         self.metadata = metadata # as a dbox_provider.Metadata object
-
-################ Decorators ####################
-def authdec():
-    def decorator(f):
-        def wrapper(*args, **kwargs):
-            log.debug('%s( *%s )' % (f.__name__, `args`))
-            dbox = dbox_provider.DropboxProvider()
-            status = dbox.probe(args[1])
-            # check access token *existence*
-            if ( status["state"] != dbox_provider.STATE_CODES["connected"] ):
-                return { "error": 1 , "msg": "Invalid Session. Relogin"}
-            else:
-                status = dbox.login(args[1])
-                # check access token validity
-                if ( status["state"] != dbox_provider.STATE_CODES["connected"] ):
-                    return { "error": 1 , "msg": "Bad access token. Relogin!"}
-            try:
-                wrapper.__doc__ = f.__doc__
-                kwargs["dbox"] = dbox
-                return f(*args, **kwargs)
-            except Exception as e:
-                log.exception("Exception: " + str(e))
-                return {"error":1 , "msg": str(e)}
-    return decorator
 
 class PCAPIRest(object):
     """ REST part of the API. Return values should be direct json """
@@ -72,8 +48,7 @@ class PCAPIRest(object):
     def capabilities(self):
         # TODO: configure under a providerFactory once we have >2 providers
         return { \
-          "dropbox" : ["oauth", "search", "synchronize", "delete"], \
-          "local" : ["search", "synchronize", "delete"] \
+           "local" : ["search", "synchronize", "delete"] \
         }
 
     def auth(self, provider, userid):
@@ -91,18 +66,7 @@ class PCAPIRest(object):
         if self.provider != None:
             return None
         log.debug("auth: resuming %s %s" % (provider, userid) )
-        if (provider == "dropbox"):
-            self.provider = dbox_provider.DropboxProvider()
-            status = self.provider.probe(userid)
-            # check access token *existence*
-            if ( status["state"] != dbox_provider.STATE_CODES["connected"] ):
-                return { "error": 1 , "msg": "Invalid Dropbox Session. Relogin"}
-            else:
-                status = self.provider.login(userid)
-                # check access token validity
-                if ( status["state"] != dbox_provider.STATE_CODES["connected"] ):
-                    return { "error": 1 , "msg": "Bad access token. Relogin!"}
-        elif (provider == "local"):
+        if (provider == "local"):
             # on auth necessary for local
             try:
                 self.provider = fs_provider.FsProvider(userid)
@@ -438,7 +402,7 @@ class PCAPIRest(object):
     def fs(self, provider, userid, path, process=None, frmt=None):
         """
             Args:
-                provider: e.g. dropbox
+                provider: e.g. local, dropbox etc.
                 userid: a registered userid
                 path: path to a filename (for creating/uploading/querying etc.)
                 process (optional) : callback function to process the uploaded
@@ -470,67 +434,24 @@ class PCAPIRest(object):
                     return { "error": 0, "metadata" : msg}
                 ## GET url is a file -> Download file stream ########
                 else:
-                    if (provider == "local"):
-                        rpath = self.provider.realpath(path)
-                        log.debug("Serving static file: %s" % rpath );
-                        return static_file( os.path.basename(rpath) , root=os.path.dirname(rpath))
-                    else:
-                        #DROPBOX-specific error checks for editors and records.
-                        #TODO: Move outside /fs/ e.g. GET for /records/...
-
-                        #check here if there is an image part of and if image exists in dropbox
-                        httpres, metadata = self.provider.get_file_and_metadata(path)
-                        log.debug(metadata)
-                        body = httpres.read()
-                        headers = {}
-                        for name, value in httpres.getheaders():
-                            if name != "connection":
-                                self.response[name] = value
-                                headers[name] = value
-                        log.debug(headers)
-                        if not "editors" in path:
-                            log.debug("not editors")
-                            if "image-" in body or "audio-" in body:
-                                log.debug("asset in record")
-                                obj = json.loads(body)
-                                log.debug(obj)
-                                for field in obj["properties"]["fields"]:
-                                    if "image-" in field["id"] or "audio-" in field["id"]:
-                                        res = self.provider.search(path.replace("record.json", ""), field["val"])
-                                        log.debug(len(res.md))
-                                        if len(res.md) == 0:
-                                            log.debug("no such a file in dbox")
-                                            self.response.status = 409
-                                            return { "error": 1, "msg" : "The record is incomplete!"}
-                            #return httpres
-                            return Response(body=body, status='200 OK', headers=headers)
-                        else:
-                            #body = httpres.read()
-                            validator = FormValidator(body)
-                            if validator.validate():
-                                log.debug("valid html5")
-                                if frmt == 'android':
-                                    log.debug('it s an android')
-                                    parser = COBWEBFormParser(body)
-                                    body = parser.extract()
-                                return Response(body=body, status='200 OK', headers=headers)
-                            else:
-                                log.debug("non valid html5")
-                                self.response.status = 403
-                                return { "error": 1, "msg" : "The editor is not valid"}
-            ######## PUT -> Upload/Overwrite file using dropbox rules ########
+                    rpath = self.provider.realpath(path)
+                    log.debug("Serving static file: %s" % rpath );
+                    return static_file( os.path.basename(rpath) , root=os.path.dirname(rpath))
+            ######## PUT -> Upload/Overwrite file ########
             if method=="PUT":
                 fp = self.request.body
                 md = self.provider.upload(path, fp, overwrite=True)
                 return { "error": 0, "msg" : "File uploaded", "path":md.ls()}
-            ######## POST -> Upload/Rename file using dropbox rules ########
+            ######## POST -> Upload/Rename file ########
             if method=="POST":
-                # POST needs multipart/form-data because that's what phonegap supports (but NOT dropbox)
+                # POST needs multipart/form-data because that's what phonegap supports
                 data = self.request.files.get('file')
                 if data != None:
                     log.debug("data not None")
                     # if process is defined then pipe the body through process
                     log.debug(data.filename)
+
+                    ## TODO: REMOVE THIS, see  IssueID #33
                     if data.filename.lower().endswith(".jpg") or data.filename.lower().endswith(".jpeg"):
                         body = data.file.read()
                         fp = StringIO(body) if not process else process(data.file)
@@ -596,18 +517,8 @@ class PCAPIRest(object):
             return {"error":1 , "msg": str(e)}
 
     def login(self,provider,userid=None):
+        """ This function is not used and just generates UUIDs when called """
         log.debug("URL: " + self.request.url)
-        # Get optional "async", "oath_token" parameters otherwise assume None
-        async = True if self.request.GET.get("async", None) == "true" else False
-        # oauth_token is  only for "callback" i.e. when the request is coming from dropbox
-        oauth_token = self.request.GET.get("oauth_token",None)
-        not_approved = True if self.request.GET.get("not_approved", None) == "true" else False
-        callback = self.request.GET.get("callback",False)
-        callback = self.request.url if async else callback
-        log.debug("provider: %s, async: %s, oauth_token: %s, userid: %s, callback: %s" % \
-            (provider,async,oauth_token, userid, `callback`) )
-        log.debug("host: %s, port: %s" % \
-            ( self.request.environ.get("SERVER_NAME", "NONE") , self.request.environ.get("SERVER_PORT") ) )
         if ( provider == "local" ):
             # Local provider has no login yet. It just generates uuids
             if (not userid):
@@ -615,33 +526,6 @@ class PCAPIRest(object):
             provider = fs_provider.FsProvider(userid)
             res = provider.login()
             log.debug("fs_provider login response: ")
-            log.debug( logtool.pp(res))
-        elif ( provider == "dropbox"):
-            dbox = dbox_provider.DropboxProvider()
-            if oauth_token:
-                # it's a callback from dropbox and not from user. Try to revive session
-                try:
-                    msg = dbox.callback(oauth_token)
-                    log.debug("Callback WORKED!: " + msg)
-                    return "Logged in! Feel free to close your browser."
-                except DBException as e:
-                    return {"error": 1, "msg": str(e)}
-
-            if userid:
-                # Resume session or Poll
-                if (async):
-                    if not_approved:
-                        log.debug("Revoke user_id %s" % userid)
-                        dbox.revoke(userid)
-                    else:
-                        log.debug("got polling request for :" + userid)
-                    return dbox.probe(userid)
-                else:
-                    #just resume:
-                    log.debug("resuming session " + userid)
-                    return dbox.login(req_key=userid)
-            res = dbox.login(req_key=None, callback=callback, async=async)
-            log.debug("dropbox_login response: ")
             log.debug( logtool.pp(res))
         else:
             res = { "error": 1 , "msg": "Wrong or unsupported arguments" }
