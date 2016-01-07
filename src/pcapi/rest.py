@@ -1,9 +1,7 @@
 import base64
-import csv
 import json
 import os
 import re
-import simplekml
 import sys
 import tempfile
 import uuid
@@ -13,7 +11,6 @@ import zipfile
 
 from bottle import static_file
 from StringIO import StringIO
-from operator import itemgetter
 
 try:
     import threadpool
@@ -21,7 +18,6 @@ except ImportError:
     sys.stderr.write("Error: Can't find threadpool...")
 
 from pcapi import ogr, fs_provider, logtool
-from pcapi.form_validator import Editor
 from pcapi.cobweb_parser import COBWEBFormParser
 from pcapi.exceptions import FsException
 from pcapi.publish import postgis, geonetwork
@@ -533,27 +529,6 @@ class PCAPIRest(object):
 
         return self.provider.copy(folder, new_folder)
 
-    def convertToKML(self, records, userid):
-        """
-        function for converting from json to kml
-        """
-        self.response.headers['Content-Type'] = 'xml/application'
-        self.response.headers['Content-Disposition'] = 'attachment; filename="download.kml"'
-        kml = simplekml.Kml(open=1)
-        for r in records:
-            log.debug(r.content)
-            for record in r.content.itervalues():
-                description = "editor: %s\n timestamp: %s\n" %(record["properties"]["editor"], record["properties"]["timestamp"])
-                for f in record["properties"]["fields"]:
-                    if "fieldcontain-image" in str(f["id"]):
-                        description += "%s: %s\n" % (str(f["label"]), "<img src='http://%s/1.3/pcapi/records/dropbox/%s/%s/%s' >" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], str(f["val"])))
-                    else:
-                        description += "%s: %s\n" % (str(f["label"]), str(f["val"]))
-                log.debug(description)
-                pnt = kml.newpoint(name=record["name"], description=description, coords=[(record["geometry"]["coordinates"][0], record["geometry"]["coordinates"][1])])
-
-        return kml.kml()
-
     def convertToGeoJSON(self, records, userid):
         """
         Export all records to geojson and return result.
@@ -586,94 +561,6 @@ class PCAPIRest(object):
 
         # We can now convert to whatever OGR supports
         return ogr.toPostGIS(data, userid)
-
-    def convertToCSV(self, records, userid):
-        """
-        function for converting from json to csv
-        """
-        log.debug("export csv")
-        self.response.headers['Content-Type'] = 'text/csv'
-        self.response.headers['Content-Disposition'] = 'attachment; filename="download.csv"'
-        if not os.path.exists(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', '..', '..', 'tmp')):
-            os.mkdir(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', '..', '..', 'tmp'))
-        temp = tempfile.NamedTemporaryFile(prefix='export_', suffix='.csv', dir=os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', '..', '..', 'tmp'), delete=False)
-        log.debug(temp.name)
-        with open(temp.name, "w") as file:
-            csv_file = csv.writer(file)
-            i=0
-            editor = ""
-            new_records = []
-            for r in records:
-                for record in r.content.itervalues():
-                    new_records.append(record)
-            results = sorted(new_records, key=itemgetter('editor'))
-            for record in results:
-                if editor != record["properties"]["editor"]:
-                    log.debug(record["properties"]["editor"])
-                    path = "/editors/"+record["properties"]["editor"]
-                    if record["properties"]["editor"] == "image.edtr" or record["properties"]["editor"] == "audio.edtr" or record["properties"]["editor"] == "text.edtr":
-                        ed = urllib2.urlopen("http://fieldtripgb.edina.ac.uk/authoring/editors/default/"+record["properties"]["editor"]).read()
-                    elif record["properties"]["editor"] == "track.edtr":
-                        ed = urllib2.urlopen("http://fieldtripgb.edina.ac.uk/authoring/editors/default/text.edtr").read()
-                    else:
-                        try:
-                            buf, meta = self.provider.get_file_and_metadata(path)
-                            ed = buf.read()
-                        except Exception as e:
-                            log.exception("Exception: " + str(e))
-                            pass
-                        buf.close()
-                    edit = Editor(ed)
-                    field_headers = edit.findElements()
-                    csv_file.writerow([record["properties"]["editor"]])
-                    headers = ["Name", "Timestamp", "Longitude", "Latitude", "Altitude"]
-                    for h in field_headers:
-                        if h[0] != "fieldcontain-text-1":
-                            headers.append(h[1])
-                    i=0
-                alt = 0
-                if len(record["geometry"]["coordinates"]) > 2:
-                    alt = record["geometry"]["coordinates"][2]
-                fields = [record["name"], record["properties"]["timestamp"], record["geometry"]["coordinates"][0], record["geometry"]["coordinates"][1], alt]
-
-                ## TODO: Remove those ugly ad-hoc checks. The Mobile app should submit records with same length and at the same order.
-                all_fields = [ x[0] for x in field_headers ]
-                for field in all_fields:
-                    # For some reason we need to skip fieldcontain-text-1 because it is omitted from the headers above (Why?)
-                    if field=="fieldcontain-text-1":
-                        #print "skipping Site-ID"
-                        continue
-
-                    found_field_value = False
-                    # check if field exists in record
-                    for f in record["properties"]["fields"]:
-                        if str(f["id"]) == field:
-                            #bingo
-                            found_field_value = True
-                            #log.debug("Found value %s = %s" % (`f["id"]`, `f["val"]` ))
-                            if "fieldcontain-image" in str(f["id"]):
-                                fields.append("http://%s/1.3/pcapi/records/dropbox/%s/%s/%s" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], str(f["val"])))
-                            elif "fieldcontain-track" in str(f["id"]):
-                                fields.append("http://%s/1.3/pcapi/records/dropbox/%s/%s/%s" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], str(f["val"])))
-                            elif "fieldcontain-audio" in str(f["id"]):
-                                fields.append("http://%s/1.3/pcapi/records/dropbox/%s/%s/%s" % (self.request.environ.get("SERVER_NAME", "NONE"), userid, record["name"], str(f["val"])))
-                            else:
-                                fields.append(str(f["val"]))
-                    if not found_field_value:
-                        # append empty string if not field is not found in record
-                        fields.append("")
-                if i == 0:
-                    csv_file.writerow(headers)
-
-                csv_file.writerow(fields)
-                editor = record["properties"]["editor"]
-                i = i+1
-        file.close()
-        f = open(temp.name, "r")
-        d = f.readlines()
-        f.close()
-        os.remove(temp.name)
-        return d
 
     def filter_data(self, filters, path, userid):
         records_cache = self.rec_cache
@@ -756,10 +643,6 @@ class PCAPIRest(object):
                 log.debug("filter by format %s" % frmt)
                 if frmt == "geojson":
                     return self.convertToGeoJSON(records_cache, userid)
-                elif frmt == "kml":
-                    return self.convertToKML(records_cache, userid)
-                elif frmt == "csv":
-                    return self.convertToCSV(records_cache, userid)
                 elif frmt == "database":
                     return self.convertToDatabase(records_cache, userid)
                 else:
