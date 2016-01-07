@@ -1,6 +1,4 @@
 from bs4 import BeautifulSoup
-# from lxml.html.clean import clean_html, Cleaner
-# from lxml import etree
 from pcapi import logtool
 # from pcapi import config
 # from StringIO import StringIO
