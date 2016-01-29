@@ -18,7 +18,6 @@ except ImportError:
     sys.stderr.write("Error: Can't find threadpool...")
 
 from pcapi import ogr, fs_provider, logtool
-from pcapi.cobweb_parser import COBWEBFormParser
 from pcapi.exceptions import FsException
 from pcapi.publish import postgis, geonetwork
 
@@ -334,8 +333,7 @@ class PCAPIRest(object):
                     try:
                         fpath = self.provider.realpath(fname)
                         with open (fpath) as f:
-                            parser = COBWEBFormParser(f.read())
-                            names.append( parser.get_survey() )
+                            names.append(json.load(f)['title'])
                     # Catch-all as a last resort
                     except Exception as e:
                         log.debug("Exception parsing %s: " % fpath + `e`)

@@ -72,14 +72,16 @@ class TestAuthoringTool(unittest.TestCase):
 
     def test_post_editor(self):
         """  post an editor """
-        url='/fs/{0}/{1}/editors/test.edtr'.format(provider,userid)
+
+        url='/fs/{0}/{1}/editors/test.json'.format(provider,userid)
         editor = editorfile.read()
-        resp = app.post(url, params=editor).json
-        self.assertEquals(resp["error"], 0 )
-        # Contents of /editors/ should be the "/editors/test.edtr" (always receives absolute paths)
+        with open (os.path.join(config.get("test", "test_resources"), 'form.json'), "r") as f:
+            resp = app.post(url, params=f.read()).json
+            self.assertEquals(resp["error"], 0 )
+        # Contents of /editors/ should be the "/editors/test.json" (always receives absolute paths)
         resp = app.get('/fs/{0}/{1}/editors'.format(provider,userid) ).json
         #print `resp`
-        self.assertTrue("/editors/test.edtr" in resp["metadata"])
+        self.assertTrue("/editors/test.json" in resp["metadata"])
 
 
     def test_get_all_editors(self):
@@ -89,8 +91,8 @@ class TestAuthoringTool(unittest.TestCase):
         resp = app.get(url).json
         self.assertEquals(resp["error"], 0 )
         try:
-            self.assertTrue("test.edtr" in resp["metadata"])
-            self.assertTrue("My Survey Title" in resp["names"])
+            self.assertTrue("test.json" in resp["metadata"])
+            self.assertTrue("test-form" in resp["names"])
         except:
             print "Assertion failed. Got: %s" % `resp`
     ########### GET RECORDS ###########
