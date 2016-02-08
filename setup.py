@@ -11,14 +11,12 @@ setup(
         'pcapi': ['data/*',],
     },
 
-    install_requires=['beautifulsoup4==4.1.3',
-                      'bottle==0.11.4',
-                      'html5lib==0.999',
+    install_requires=['bottle==0.11.4',
                       'threadpool==1.2.7',
                       'WebTest==2.0.4',
                       'psycopg2==2.5.3',
                       'pysqlite==2.6.3',
-		      'ppygis==0.2'],
+                      'ppygis==0.2'],
 
     zip_safe=True,
     entry_points={

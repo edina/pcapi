@@ -332,8 +332,9 @@ class PCAPIRest(object):
                 for fname in res["metadata"]:
                     try:
                         fpath = self.provider.realpath(fname)
-                        with open (fpath) as f:
-                            names.append(json.load(f)['title'])
+                        if fpath.endsWith(".json"):
+                            with open (fpath) as f:
+                                names.append(json.load(f)['title'])
                     # Catch-all as a last resort
                     except Exception as e:
                         log.debug("Exception parsing %s: " % fpath + `e`)
