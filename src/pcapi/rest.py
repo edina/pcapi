@@ -314,54 +314,55 @@ class PCAPIRest(object):
         if (error):
             return error
 
+        splits = os.path.splitext(path)
         # Convert editor name to local filesystem path
         path = "/editors/" + path
 
         if path == "/editors//" and not self.provider.exists(path):
             log.debug("creating non-existing editors folder")
             self.provider.mkdir("/editors")
-        # No subdirectories are allowed when accessing editors
-        if re.findall("/editors//?[^/]*$",path):
-            res = self.fs(provider,userid,path,frmt=flt)
 
-            # If "GET /editors//" is reguested then add a "names" parameter
-            if path == "/editors//" and res["error"] == 0 and provider == "local" \
-                and self.request.method == "GET":
-                log.debug("GET /editors// call. Returning names:")
-                names = []
-                for fname in res["metadata"]:
+        res = self.fs(provider,userid,path,frmt=flt)
+
+        # If "GET /editors//" is reguested then add a "names" parameter
+        if path == "/editors//" and res["error"] == 0 and provider == "local" \
+            and self.request.method == "GET":
+            log.debug("GET /editors// call. Returning names:")
+            names = []
+            for fname in res["metadata"]:
+                if fname.endswith(".json"):
                     try:
                         fpath = self.provider.realpath(fname)
-                        if fpath.endsWith(".json"):
-                            with open (fpath) as f:
-                                names.append(json.load(f)['title'])
+                        with open (fpath) as f:
+                            names.append(json.load(f)['title'])
                     # Catch-all as a last resort
                     except Exception as e:
                         log.debug("Exception parsing %s: " % fpath + `e`)
                         log.debug("*FALLBACK*: using undefined as name")
                         names.append(None)
-                log.debug(`names`)
-                res["names"] = names
+                else:
+                    res["metadata"].remove(fname)
+            log.debug(`names`)
+            res["names"] = names
 
-                # we convert /editors//XXX.whatever as XXX.whatever
-                # TODO: when editors become json, put decision trees inside the editor file
-                # and remove all filename extensions (like in /surveys/)
-                res["metadata"] = [ re.sub(r'/editors//?(.*)', r'\1', x) for x in res["metadata"] ]
+            # we convert /editors//XXX.whatever as XXX.whatever
+            # TODO: when editors become json, put decision trees inside the editor file
+            # and remove all filename extensions (like in /surveys/)
+            res["metadata"] = [ re.sub(r'/editors//?(.*)', r'\1', x) for x in res["metadata"] ]
 
-            ## If public==true then execute the same PUT/POST command to the
-            ## public UUID (s. pcapi.ini) and return that result
-            elif provider == "local" and \
-            ( self.request.method == "PUT" or self.request.method == "POST"):
-                try:
-                    public = self.request.GET.get("public")
-                    if public == "true":
-                        log.debug("Mirroring command to public uid: ")
-                        self.provider.copy_to_public_folder(path)
-                except Exception as e:
-                    if res.has_key("msg"):
-                        res["msg"] + "  PUBLIC_COPY: " + e.message
-            return res
-        return { "error": 1, "msg": "Path %s has subdirectories, which are not allowed" % path}
+        ## If public==true then execute the same PUT/POST command to the
+        ## public UUID (s. pcapi.ini) and return that result
+        elif provider == "local" and \
+        ( self.request.method == "PUT" or self.request.method == "POST"):
+            try:
+                public = self.request.GET.get("public")
+                if public == "true":
+                    log.debug("Mirroring command to public uid: ")
+                    self.provider.copy_to_public_folder(path)
+            except Exception as e:
+                if res.has_key("msg"):
+                    res["msg"] + "  PUBLIC_COPY: " + e.message
+        return res
 
     def features(self, provider, userid, path):
         """ High level layer (overlay) functions. Normally it is a shortcut to
