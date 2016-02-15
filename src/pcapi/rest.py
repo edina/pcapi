@@ -314,7 +314,6 @@ class PCAPIRest(object):
         if (error):
             return error
 
-        splits = os.path.splitext(path)
         # Convert editor name to local filesystem path
         path = "/editors/" + path
 
@@ -329,11 +328,13 @@ class PCAPIRest(object):
             and self.request.method == "GET":
             log.debug("GET /editors// call. Returning names:")
             names = []
+            metadata = []
             for fname in res["metadata"]:
                 if fname.endswith(".json"):
                     try:
                         fpath = self.provider.realpath(fname)
                         with open (fpath) as f:
+                            metadata.append(fname)
                             names.append(json.load(f)['title'])
                     # Catch-all as a last resort
                     except Exception as e:
@@ -341,8 +342,9 @@ class PCAPIRest(object):
                         log.debug("*FALLBACK*: using undefined as name")
                         names.append(None)
                 else:
-                    res["metadata"].remove(fname)
+                    log.debug("remove name {0}".format(fname))
             log.debug(`names`)
+            res["metadata"] = metadata
             res["names"] = names
 
             # we convert /editors//XXX.whatever as XXX.whatever
