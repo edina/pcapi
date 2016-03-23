@@ -12,18 +12,11 @@ import zipfile
 from bottle import static_file
 from StringIO import StringIO
 
-try:
-    import threadpool
-except ImportError:
-    sys.stderr.write("Error: Can't find threadpool...")
-
 from pcapi import ogr, fs_provider, logtool
 from pcapi.exceptions import FsException
 from pcapi.publish import postgis, geonetwork
 
 log = logtool.getLogger("PCAPIRest", "pcapi")
-#global number of threads
-default_number=20
 
 class Record(object):
     """ Class to store record bodies and metadata in memory for fast access"""
@@ -72,68 +65,23 @@ class PCAPIRest(object):
         return None # Success!
 
 
-    def create_records_cache(self, provider, path):
+    def create_records_cache(self, path):
         """ Creates an array of Records classed (s.a.) after parsing all records under `path'.
         Assumes a valid session """
-        records = []
 
         # If we are in `/' then get all records
         for d in self.provider.metadata(path).lsdirs():
-            recpath = d + "/record.json"
-            log.debug(recpath)
-            records.append(recpath)
-        requests = threadpool.makeRequests(self.records_worker, records, self.append_records_cache, self.handle_exception)
+            recpath = "{0}/record.json".format(d)
+            log.debug("Parsing records -- requesting {0}".format(recpath))
 
-        #insert the requests into the threadpool
-
-        # This is ugly but will need serious refactoring for the local provider.
-        # basically: if using local storage then just use one thread to avoid choking on the HD.
-        # For dropbox and other remote providers use multi-theading
-        if ( provider == "local" ):
-            pool = threadpool.ThreadPool(1)
-        else:
-            pool = threadpool.ThreadPool(min(len(requests), default_number))
-        for req in requests:
-            pool.putRequest(req)
-            log.debug("Work request #%s added." % req.requestID)
-
-        #wait for them to finish (or you could go and do something else)
-        pool.wait()
-        pool.dismissWorkers(min(len(requests), 20), do_join=True)
-        log.debug("workers length: %s" % len(pool.workers))
-
-    def records_worker(self, recpath):
-        log.debug("Parsing records -- requesting " + recpath)
-        folder = re.split("/+", recpath)[2]
-        try:
             buf, meta = self.provider.get_file_and_metadata(recpath)
             rec = json.loads(buf.read())
-            record = {}
-            record[folder] = rec
-            log.debug(record)
-        except Exception as e:
-            log.exception("Exception: " + str(e))
-            #rec = json.loads( json.dumps({}) )
             buf.close()
-            return None
-        buf.close()
-        #return Record(rec, meta)
-        return Record(record, meta)
 
-    def append_records_cache(self, request, result):
-        log.debug("result is %s" % result)
-        if result is not None:
-            self.rec_cache.append(result)
+            folder = re.split("/+", recpath)[2]
+            record = Record({folder: rec}, meta)
 
-    def handle_exception(self, request, exc_info):
-        if not isinstance(exc_info, tuple):
-            # Something is seriously wrong...
-            log.debug(request)
-            log.debug(exc_info)
-            raise SystemExit
-        log.debug( "**** Exception occured in request #%s: %s" % \
-          (request.requestID, exc_info))
-
+            self.rec_cache.append(record)
 
     def check_init_folders(self, path):
         log.debug("check %s" % path)
@@ -154,7 +102,7 @@ class PCAPIRest(object):
             return error
 
         if self.request.method == "GET":
-            self.create_records_cache(provider, "records/")
+            self.create_records_cache("records/")
             records_cache = self.filter_data("media", path, userid)
             if str(flt) == "zip":
                 self.response.headers['Content-Type'] = 'application/zip'
@@ -241,8 +189,7 @@ class PCAPIRest(object):
                         return self.fs(provider,userid,path + "/record.json")
                     ### Process all filters one by one and return the result
                     filters = flt.split(",") if flt else []
-                    #records_cache = self.create_records_cache(path) <--- WHAT IS THAT???
-                    self.create_records_cache(provider, path)
+                    self.create_records_cache(path)
                     ### GET / returns all records after applying filters
                     ### Each filter bellow will remove Records from records_cache
                     records_cache = self.filter_data(filters, None, userid)
