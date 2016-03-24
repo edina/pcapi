@@ -74,14 +74,16 @@ class PCAPIRest(object):
             recpath = "{0}/record.json".format(d)
             log.debug("Parsing records -- requesting {0}".format(recpath))
 
-            buf, meta = self.provider.get_file_and_metadata(recpath)
-            rec = json.loads(buf.read())
+            try:
+                buf, meta = self.provider.get_file_and_metadata(recpath)
+                rec = json.loads(buf.read())
+                folder = re.split("/+", recpath)[2]
+                record = Record({folder: rec}, meta)
+                self.rec_cache.append(record)
+            except Exception as e:
+                log.exception("Exception: " + str(e))
             buf.close()
 
-            folder = re.split("/+", recpath)[2]
-            record = Record({folder: rec}, meta)
-
-            self.rec_cache.append(record)
 
     def check_init_folders(self, path):
         log.debug("check %s" % path)

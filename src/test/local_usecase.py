@@ -131,6 +131,23 @@ class TestAuthoringTool(unittest.TestCase):
         #print len ( resp["records"] )
         self.assertEquals(len ( resp["records"] ) , 2 )
 
+    def test_get_invalid_records(self):
+        url = '/records/{0}/{1}//'.format(provider, userid)
+        app.delete(url).json
+
+        # post invalid record
+        url = '/records/{0}/{1}/myrecord'.format(provider, userid)
+        with open (os.path.join(config.get("test", "test_resources"), 'invalid.rec'), "r") as f:
+            resp = app.post(url, params=f.read()).json
+            self.assertEquals(resp["error"], 0 )
+
+        url = '/records/{0}/{1}/'.format(provider, userid)
+        resp = app.get(url).json
+
+        # get all returns 0 but no error
+        self.assertEquals(len(resp["records"]), 0)
+        self.assertEquals(resp["error"], 0)
+
     #### FILES ####
 
     def test_fs_file_upload(self):
