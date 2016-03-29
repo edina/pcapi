@@ -1,3 +1,11 @@
+################ ROUTES ####################
+
+#######################################################
+###  Maps HTTP/REST requests to python functions    ###
+###  They can all be tested ith wget/curl           ###
+#######################################################
+
+
 import bottle
 from bottle import route, request, response, static_file, hook
 ## pcapi imports
@@ -6,14 +14,9 @@ from pcapi import config
 from pcapi import varexport
 
 from pcapi.rest import PCAPIRest
+from pcapi.ows.OWS import OWSRest
 
 log = logtool.getLogger("pcapi")
-
-################ ROUTES ####################
-
-#######################################################
-###  Rest Callbacks (can be tested with wget/curl)  ###
-#######################################################
 
 ###  Provider capabilities ###
 
@@ -88,9 +91,15 @@ def fs(provider, userid, path="/"):
     """
     return PCAPIRest(request, response).fs(provider, userid, path)
 
+###  Optional /ows/... facade when OWS support is enabled ###
+### Assumes only public UUID as security will come from OWS-specific protection methods
+@route('/ows',method=["GET","PUT","POST","DELETE","OPTIONS"])
+def ows():
+    return OWSRest(request,response)
+
 ###  /auth/... API ###
 
-# Login to Dropbox.
+# Login to Provider
 @route('/auth/<provider>', method='GET')
 @route('/auth/<provider>/<userid>', method='GET')
 def login(provider,userid=None):
@@ -124,4 +133,3 @@ def enable_cors():
 @bottle.error(404)
 def error404(error):
     return ['NO PC-API endpoint at this URL:\n', request.environ["REQUEST_URI"], "\n"]
-
