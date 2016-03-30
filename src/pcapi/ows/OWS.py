@@ -19,7 +19,7 @@ def OWSRest(request, response):
     @param request(string):request headers
     @param response(string): response headers
     """
-    if (config.get("ows","enable") == "true"):
+    if not config.getboolean("ows","enable"):
         return _error("OWS support is disabled")
     ows_service = request.GET.get("SERVICE").upper()
     if not (ows_service):
