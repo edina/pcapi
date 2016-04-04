@@ -12,23 +12,28 @@ log = logtool.getLogger("WFS", "pcapi.ows")
 
 def _error(msg):
     log.error(msg)
-    return {"error": 1, "msg": repr(msg)}
+    return {"error": 1, "msg": msg}
 
 
 def dispatch(http_request, http_response):
     """Main function that dispatches the right function accrording to HTTP
     Request and response headers.
     """
-    wfs_version = http_request.GET.get("VERSION").upper()
-    wfs_request = http_request.GET.get("REQUEST").upper()
+    wfs_version = http_request.GET.get("VERSION")
     if not wfs_version:
         return _error("ERROR: WFS version was not specified!")
     if ((wfs_version != "1.1.0") and (wfs_version != "1.0.0")):
         return _error("WFS version %s is not supported" % wfs_version)
-    if (wfs_request == "GETCAPABILITIES"):
-        return getcapabilities(http_request, http_response, wfs_version)
+
+    wfs_request = http_request.GET.get("REQUEST")
+    if wfs_request:
+        wfs_request = wfs_request.upper()
+        if (wfs_request == "GETCAPABILITIES"):
+            return getcapabilities(http_request, http_response, wfs_version)
+        else:
+            return _error("Request %s is not supported" % wfs_request)
     else:
-        return _error("Request %s is not supported" % wfs_request)
+        return _error("Request is not defined")
 
 
 def getcapabilities(http_request, http_response, wfs_version):
