@@ -195,11 +195,11 @@ class PCAPIRest(object):
                     ### GET / returns all records after applying filters
                     ### Each filter bellow will remove Records from records_cache
                     records_cache = self.filter_data(filters, None, userid)
-                    # End of Filters... return all that's left
+                    # "format" implies that records_cache was exported to a format
                     if "format" in filters:
                         return records_cache
-                    bulk = [ r.content for r in records_cache ]
-                    return {"records": bulk, "error": 0 }
+                    bulk = [ r.content for r in records_cache]
+                    return {"records": bulk, "error": 0}
             elif re.findall("/records//?[^/]+/[^/]+$",path):
                 # We have a depth 2 e.g. /records/myrecord/image.jpg. Behave like
                 # normal /fs/ for all METHODS
@@ -487,7 +487,7 @@ class PCAPIRest(object):
         self.response.headers['Content-Type'] = 'application/json'
         features = []
         for r in records:
-            #log.debug(r.content)
+            # log.debug(r.content)
             # get first -and only- value of dictionary because records are an array of
             # [ { <name> : <geojson feature> } ....]
             f = r.content.values()[0]
