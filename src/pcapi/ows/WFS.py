@@ -72,20 +72,25 @@ def getfeature(params):
     @param params(dict): request headers
     @returns dictionary with { resposne, mimetype} or error
     """
-    if "featuretype" not in params:
-        return {"error": 1, "response": "Missing 'featureType'"}
-    FEATURETYPE = params["featuretype"]
+    # Mandatory parametres
+    if "typename" not in params:
+        return {"error": 1, "response": "Missing 'typeName'"}
+    TYPENAME = params["typename"]
+
+    # Optional parametres
+    OUTPUTFORMAT = params["outputformat"] if "outputformat" in params else None
+
     SID = None
     FEATURES_FILE=os.path.join(config.get("path", "ows_template_dir"), "features.json")
     with open(FEATURES_FILE) as f:
         FEATURES = json.load(f)
         for k in FEATURES:
-            if FEATURES[k]["name"] == FEATURETYPE:
+            if FEATURES[k]["name"] == TYPENAME:
                 SID=k
 
     if not SID:
         return {"error": 1, "response": "featureType %s not found in features.json"
-                % FEATURETYPE}
+                % TYPENAME}
 
     public_uid = config.get("path", "public_uid")
     fp = fs_provider.FsProvider(public_uid)
