@@ -69,11 +69,15 @@ def filter_data(records_cache, filters, userid, params={}):
             ## "editor" filter requires param "id"
             if "id" not in params:
                 return {"msg": 'missing parameter "id"', "error":1}
+            ID = params["id"]
             tmp_cache = []
             for x in records_cache:
                 for r in x.content.itervalues():
-                    if x.content is not None and r["properties"]["editor"].lower() == params["id"].lower():
-                        tmp_cache.append(x)
+                    if x.content is not None:
+                        if(r["properties"]["editor"]==ID) or \
+                          (r["properties"]["editor"]==ID + ".json") or \
+                          (r["properties"]["editor"]==ID + ".edtr"):
+                            tmp_cache.append(x)
             records_cache = tmp_cache
             # records_cache = [r for r in records_cache.itervalues() if r is not None and r.content["editor"].lower() == f_id]
             log.debug("found filter by editor")
