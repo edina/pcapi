@@ -72,16 +72,17 @@ def getfeature(params):
     @param params(dict): request headers
     @returns dictionary with { resposne, mimetype} or error
     """
-    # Mandatory parametres
+    ## Mandatory parametres
     if "typename" not in params:
         return {"error": 1, "response": "Missing 'typeName'"}
     TYPENAME = params["typename"]
+    ENDPOINT=config.get("ows", "endpoint")
+    FEATURES_FILE=os.path.join(config.get("path", "ows_template_dir"), "features.json")
 
-    # Optional parametres
-    OUTPUTFORMAT = params["outputformat"] if "outputformat" in params else None
+    ## Optional parametres
+    OUTPUTFORMAT = params["outputformat"] if "outputformat" in params else "text/xml; subtype=gml/3.1.1"
 
     SID = None
-    FEATURES_FILE=os.path.join(config.get("path", "ows_template_dir"), "features.json")
     with open(FEATURES_FILE) as f:
         FEATURES = json.load(f)
         for k in FEATURES:
@@ -102,9 +103,16 @@ def getfeature(params):
     res = Records.convertToGeoJSON(filtered_records)
 
     if res:
+        if (OUTPUTFORMAT == "application/json") or (OUTPUTFORMAT == "json"):
+            return {"error": 0, "response": res, "mimetype": "application/json"}
+        # If not JSON assume XML and pipe through template
+        APPSCHEMA_FILE=os.path.join(config.get("path", "ows_template_dir"),
+                                    SID + ".tpl")
+        with open(APPSCHEMA_FILE) as f:
+                res = template(f.read(), FC=res, OWS_ENDPOINT=ENDPOINT,)
         return {"error": 0, "response": res, "mimetype":'text/xml; charset=utf-8'}
     else:
-        return {"error": 1, "response": "WFS GetCapalities unsuccessful"}
+        return {"error": 1, "response": "WFS GetFeature unsuccessful"}
 
 if __name__ == "__main__":
     import sys

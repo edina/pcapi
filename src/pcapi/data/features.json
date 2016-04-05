@@ -1,4 +1,4 @@
 { 
-    "SID1" : {"name": "cobweb:FeatureCollection1", "title": "First Collection", "template":"template1.tpl"},
-    "SID2" : {"name": "cobweb:FeatureCollection2", "title": "Second Collection", "template":"tempalte2.tpl"}
+    "SID1" : {"name": "cobweb:FeatureCollection1", "title": "First Collection"},
+    "SID2" : {"name": "cobweb:FeatureCollection2", "title": "Second Collection"}
 }
