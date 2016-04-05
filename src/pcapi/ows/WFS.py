@@ -34,6 +34,11 @@ def dispatch(http_request, http_response):
         if (result["error"] == 0):
             http_response.content_type = result["mimetype"]
         return result[ "response"]
+    if (wfs_request == "DESCRIBEFEATURETYPE"):
+        result = describefeaturetype(params)
+        if (result["error"] == 0):
+            http_response.content_type = result["mimetype"]
+        return result[ "response"]
     if (wfs_request == "GETFEATURE"):
         result = getfeature(params)
         if (result["error"] == 0):
@@ -45,7 +50,7 @@ def dispatch(http_request, http_response):
 def getcapabilities(params):
     """WFS GetCapalities interface
     @param params(dict): request headers
-    @returns dictionary with { resposne, mimetype} or error
+    @returns dictionary with { response, mimetype, error }
     """
     FEATURES = None
 
@@ -67,10 +72,41 @@ def getcapabilities(params):
         return {"error": 1, "response": "WFS GetCapalities unsuccessful"}
 
 
+def describefeaturetype(params):
+    """WFS DescribeFeatureType interface
+    @param params(dict): request headers
+    @returns dictionary with { response, mimetype, error }
+    """
+    ## Mandatory parametres
+    if "typename" not in params:
+        return {"error": 1, "response": "Missing 'typeName'"}
+    TYPENAME = params["typename"]
+    FEATURES_FILE=os.path.join(config.get("path", "ows_template_dir"), "features.json")
+
+    SID = None
+    with open(FEATURES_FILE) as f:
+        FEATURES = json.load(f)
+        for k in FEATURES:
+            if FEATURES[k]["name"] == TYPENAME:
+                SID=k
+
+    if not SID:
+        return {"error": 1, "response": "featureType %s not found in features.json"
+                % TYPENAME}
+
+    XSD_FILE=os.path.join(config.get("path", "ows_template_dir"), SID + ".xsd")
+
+    try:
+        with open(XSD_FILE) as f:
+            return {"error": 0, "response": f.read(), "mimetype":'text/xml; charset=utf-8'}
+    except IOError:
+        return _error("Cannot open file %s.xsd" % SID)
+
+
 def getfeature(params):
     """WFS GetFeature interface
     @param params(dict): request headers
-    @returns dictionary with { resposne, mimetype} or error
+    @returns dictionary with { response, mimetype, error }
     """
     ## Mandatory parametres
     if "typename" not in params:
