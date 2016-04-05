@@ -22,8 +22,8 @@ def dispatch(http_request, http_response):
     """
     params = helper.httprequest2dict(http_request)
 
-    wfs_version = params["version"]
-    wfs_request = params["request"].upper()
+    wfs_version = params["version"] if "version" in params else None
+    wfs_request = params["request"].upper() if "request" in params else None
     result = { "response":None, "mimetype":"application/json"}
     if not wfs_version:
         return _error("ERROR: WFS version was not specified!")

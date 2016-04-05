@@ -1,5 +1,5 @@
 """
-Unit tests for PACPI WFS
+Unit tests for PCAPI WFS
 """
 
 import unittest
@@ -8,6 +8,7 @@ from pcapi.server import application
 from webtest import TestApp
 
 import xml.etree.ElementTree as ET
+
 
 class TestWFS(unittest.TestCase):
     def test_get_capabilities(self):
@@ -39,13 +40,12 @@ class TestWFS(unittest.TestCase):
         self.assertEquals(resp['error'], 1)
         self.assertEquals(
             resp['msg'],
-             'WFS version {0} is not supported'.format(version))
-
+            'WFS version {0} is not supported'.format(version))
         version = '1.1.0'
         url = '{0}?SERVICE={1}&VERSION={2}'.format(base_url, service, version)
         resp = app.get(url).json
         self.assertEquals(resp['error'], 1)
-        self.assertEquals(resp['msg'], 'Request is not defined')
+        self.assertEquals(resp['msg'], 'Request None is not supported')
 
         request = 'XXX'
         url = '{0}?SERVICE={1}&VERSION={2}&REQUEST={3}'.format(
@@ -63,4 +63,4 @@ class TestWFS(unittest.TestCase):
         namespaces = {'wfs': 'http://www.opengis.net/wfs'}
         root = ET.fromstring(resp.text)
         ft = root.findall('.//wfs:FeatureType[1]/wfs:Name', namespaces)
-        self.assertEquals(ft[0].text, 'cobweb:FeatureCollection1')
+        self.assertTrue(ft[0].text.startswith('cobweb:'))
