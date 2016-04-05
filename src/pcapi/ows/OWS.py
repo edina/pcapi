@@ -11,7 +11,7 @@ log = logtool.getLogger("OWS", "pcapi.ows")
 
 def _error(msg):
     log.error(msg)
-    return {"error":1, "msg":repr(msg)}
+    return {"error":1, "msg":msg}
 
 
 def OWSRest(request, response):
@@ -21,7 +21,9 @@ def OWSRest(request, response):
     """
     if not config.getboolean("ows","enable"):
         return _error("OWS support is disabled")
-    ows_service = request.GET.get("SERVICE").upper()
+    ows_service = request.GET.get("SERVICE")
+    if ows_service:
+        ows_service = ows_service.upper()
     if not (ows_service):
         return _error("No OWS SERVICE specified")
 
@@ -31,4 +33,4 @@ def OWSRest(request, response):
         return _error("SOS is still WIP. Try WFS!")
         # return sos.dispatch(request,response)
     else:
-        return _error("Serice %s is not supported" % ows_service)
+        return _error("Service %s is not supported" % ows_service)

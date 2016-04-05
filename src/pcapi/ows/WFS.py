@@ -13,7 +13,7 @@ log = logtool.getLogger("WFS", "pcapi.ows")
 
 def _error(msg):
     log.error(msg)
-    return {"error": 1, "response": repr(msg)}
+    return {"error": 1, "msg": msg}
 
 
 def dispatch(http_request, http_response):
