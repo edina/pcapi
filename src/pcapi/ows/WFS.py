@@ -65,7 +65,7 @@ def getcapabilities(params):
 
     with open(GETCAPABILITIES_FILE) as f:
         res = template(f.read(), OWS_ENDPOINT=ENDPOINT,
-                       WFS_FEATURES=FEATURES)
+                       WFS_FEATURES=FEATURES, WFS_VERSION=params["version"])
     if res:
         return {"error": 0, "response": res, "mimetype":'text/xml; charset=utf-8'}
     else:

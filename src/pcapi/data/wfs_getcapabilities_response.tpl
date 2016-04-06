@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<wfs:WFS_Capabilities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.opengis.net/wfs" xmlns:wfs="http://www.opengis.net/wfs" xmlns:ows="http://www.opengis.net/ows" xmlns:gml="http://www.opengis.net/gml" xmlns:ogc="http://www.opengis.net/ogc" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cobweb="cobweb" version="1.1.0" xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd">
+<wfs:WFS_Capabilities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.opengis.net/wfs" xmlns:wfs="http://www.opengis.net/wfs" xmlns:ows="http://www.opengis.net/ows" xmlns:gml="http://www.opengis.net/gml" xmlns:ogc="http://www.opengis.net/ogc" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cobweb="cobweb" version="{{WFS_VERSION}}" xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/{{WFS_VERSION}}/wfs.xsd">
   <ows:ServiceIdentification>
     <ows:Title/>
     <ows:Abstract/>
     <ows:ServiceType>WFS</ows:ServiceType>
-    <ows:ServiceTypeVersion>1.1.0</ows:ServiceTypeVersion>
+    <ows:ServiceTypeVersion>{{WFS_VERSION}}</ows:ServiceTypeVersion>
     <ows:Fees/>
     <ows:AccessConstraints/>
   </ows:ServiceIdentification>
