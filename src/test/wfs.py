@@ -25,41 +25,41 @@ class TestWFS(unittest.TestCase):
         # check invalid parameters
         resp = self.app.get(self.base_url).json
         self.assertEquals(resp['error'], 1)
-        self.assertEquals(resp['msg'], 'No OWS SERVICE specified')
+        self.assertEquals(resp['response'], 'No OWS SERVICE specified')
 
         service = 'XXX'
         url = '{0}?SERVICE={1}'.format(self.base_url, service)
         resp = self.app.get(url).json
         self.assertEquals(resp['error'], 1)
         self.assertEquals(
-            resp['msg'],
+            resp['response'],
             'Service {0} is not supported'.format(service))
 
         service = 'WFS'
         url = '{0}?SERVICE={1}'.format(self.base_url, service)
         resp = self.app.get(url).json
         self.assertEquals(resp['error'], 1)
-        self.assertEquals(resp['msg'], 'ERROR: WFS version was not specified!')
+        self.assertEquals(resp['response'], 'ERROR: WFS version was not specified!')
 
         version = '0.1.0'
         url = '{0}?SERVICE={1}&VERSION={2}'.format(self.base_url, service, version)
         resp = self.app.get(url).json
         self.assertEquals(resp['error'], 1)
         self.assertEquals(
-            resp['msg'],
+            resp['response'],
             'WFS version {0} is not supported'.format(version))
         version = '1.1.0'
         url = '{0}?SERVICE={1}&VERSION={2}'.format(self.base_url, service, version)
         resp = self.app.get(url).json
         self.assertEquals(resp['error'], 1)
-        self.assertEquals(resp['msg'], 'Request None is not supported')
+        self.assertEquals(resp['response'], 'Request None is not supported')
 
         request = 'XXX'
         url = '{0}?SERVICE={1}&VERSION={2}&REQUEST={3}'.format(
             self.base_url, service, version, request)
         resp = self.app.get(url).json
         self.assertEquals(resp['error'], 1)
-        self.assertEquals(resp['msg'], 'Request {0} is not supported'.format(request))
+        self.assertEquals(resp['response'], 'Request {0} is not supported'.format(request))
 
         # successful query, check cobweb:FeatureCollection1
         # is the name of the first FeatureType
