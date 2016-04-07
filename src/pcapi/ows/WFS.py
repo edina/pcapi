@@ -129,12 +129,16 @@ def getfeature(params):
         return {"error": 1, "response": "featureType %s not found in features.json"
                 % TYPENAME}
 
-    public_uid = config.get("path", "public_uid")
-    fp = fs_provider.FsProvider(public_uid)
+    if "test" in params and params["test"] == "1":
+        uid = config.get("test", "test_uid")
+    else:
+        uid = config.get("path", "public_uid")
+
+    fp = fs_provider.FsProvider(uid)
     # Join all records
     all_records = Records.create_records_cache(fp, "/records")
     # Filter by survey id
-    filtered_records = Records.filter_data(all_records, "editor", public_uid, {"id":SID})
+    filtered_records = Records.filter_data(all_records, "editor", uid, {"id":SID})
     # export ot GeoJSON (as Python dictionary)
     res = Records.convertToGeoJSON(filtered_records)
 
@@ -144,9 +148,12 @@ def getfeature(params):
         # If not JSON assume XML and pipe through template
         APPSCHEMA_FILE=os.path.join(config.get("path", "ows_template_dir"),
                                     SID + ".tpl")
-        with open(APPSCHEMA_FILE) as f:
+        if os.path.isfile(APPSCHEMA_FILE):
+            with open(APPSCHEMA_FILE) as f:
                 res = template(f.read(), FC=res, OWS_ENDPOINT=ENDPOINT,)
-        return {"error": 0, "response": res, "mimetype":'text/xml; charset=utf-8'}
+            return {"error": 0, "response": res, "mimetype":'text/xml; charset=utf-8'}
+        else:
+            return {"error": 1, "response": "Template not found for %s" % SID}
     else:
         return {"error": 1, "response": "WFS GetFeature unsuccessful"}
 

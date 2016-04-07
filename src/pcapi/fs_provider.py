@@ -67,7 +67,7 @@ class Metadata(object):
         return self.md["path"]
 
     def is_dir(self):
-        return True if self.md["is_dir"] == "true" else False
+        return True if (("is_dir" in self.md) and (self.md["is_dir"] == "true")) else False
 
 
 class FsProvider(object):
@@ -223,13 +223,13 @@ class FsProvider(object):
 
         realpath = self.realpath(path)
         md = {}
-        if( not os.path.isdir(realpath) ):
+        if os.path.isfile(realpath):
             # It is a file
             md["path"] = path
             md["is_dir"] = "false"
             md["modified"] = os.path.getmtime(realpath) #in epoch seconds
             md["bytes"] = os.path.getsize(realpath)
-        else:
+        elif os.path.isdir(realpath):
             #It is a directory.
             # List files but DON'T just recurse because we only want depth level 1.
             md["path"] = path
