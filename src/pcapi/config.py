@@ -85,7 +85,8 @@ if not os.path.exists(ows_tpl_path):
     print 'Creating data directory: {0}'.format(ows_tpl_path)
     os.makedirs(ows_tpl_path)
 # copy ows templates from ~/.local/.../data/ to ~/.pcapi/...
-ows_files = ['features.json', 'wfs_getcapabilities_response.tpl']
+ows_files = ['features.json', 'wfs_getcapabilities_response-1.0.0.tpl',
+             'wfs_getcapabilities_response-1.1.0.tpl']
 for f in ows_files:
     ows_file_path = os.path.join(ows_tpl_path,f)
     if not os.path.exists(ows_file_path):

@@ -4,7 +4,7 @@ available featurestypes
 
 import os, json
 
-from pcapi import logtool, config, helper, fs_provider
+from pcapi import logtool, config, fs_provider
 from pcapi.provider import Records
 from bottle import template
 
@@ -13,37 +13,26 @@ log = logtool.getLogger("WFS", "pcapi.ows")
 
 def _error(msg):
     log.error(msg)
-    return {"error": 1, "msg": msg}
+    return {"error": 1, "response": msg}
 
 
-def dispatch(http_request, http_response):
+def dispatch(params, http_response):
     """Main function that dispatches the right function accrording to HTTP
     Request and response headers.
+    @param params(dict): request headers
     """
-    params = helper.httprequest2dict(http_request)
-
     wfs_version = params["version"] if "version" in params else None
     wfs_request = params["request"].upper() if "request" in params else None
-    result = { "response":None, "mimetype":"application/json"}
     if not wfs_version:
         return _error("ERROR: WFS version was not specified!")
     if ((wfs_version != "1.1.0") and (wfs_version != "1.0.0")):
         return _error("WFS version %s is not supported" % wfs_version)
     if (wfs_request == "GETCAPABILITIES"):
-        result = getcapabilities(params)
-        if (result["error"] == 0):
-            http_response.content_type = result["mimetype"]
-        return result[ "response"]
+        return getcapabilities(params)
     if (wfs_request == "DESCRIBEFEATURETYPE"):
-        result = describefeaturetype(params)
-        if (result["error"] == 0):
-            http_response.content_type = result["mimetype"]
-        return result[ "response"]
+        return describefeaturetype(params)
     if (wfs_request == "GETFEATURE"):
-        result = getfeature(params)
-        if (result["error"] == 0):
-            http_response.content_type = result["mimetype"]
-        return result[ "response"]
+        return getfeature(params)
     return _error("Request %s is not supported" % wfs_request)
 
 
@@ -58,14 +47,14 @@ def getcapabilities(params):
     ENDPOINT=config.get("ows", "endpoint")
     FEATURES_FILE=os.path.join(config.get("path", "ows_template_dir"), "features.json")
     GETCAPABILITIES_FILE=os.path.join(config.get("path", "ows_template_dir"),
-                                      "wfs_getcapabilities_response.tpl")
+                                      "wfs_getcapabilities_response-%s.tpl" % params["version"])
 
     with open(FEATURES_FILE) as f:
         FEATURES = json.load(f)
 
     with open(GETCAPABILITIES_FILE) as f:
         res = template(f.read(), OWS_ENDPOINT=ENDPOINT,
-                       WFS_FEATURES=FEATURES, WFS_VERSION=params["version"])
+                       WFS_FEATURES=FEATURES)
     if res:
         return {"error": 0, "response": res, "mimetype":'text/xml; charset=utf-8'}
     else:
@@ -91,7 +80,7 @@ def describefeaturetype(params):
                 SID=k
 
     if not SID:
-        return {"error": 1, "response": "featureType %s not found in features.json"
+        return {"error": 1, "response": "TypeName %s not found in features.json"
                 % TYPENAME}
 
     XSD_FILE=os.path.join(config.get("path", "ows_template_dir"), SID + ".xsd")
