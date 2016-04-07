@@ -20,46 +20,44 @@ class TestWFS(unittest.TestCase):
         super(TestWFS, cls).setUpClass()
         cls.app = TestApp(application)
         cls.base_url = '/ows'
+        cls.namespaces = {
+            'wfs': 'http://www.opengis.net/wfs',
+            'ogc': 'http://www.opengis.net/ogc'
+        }
 
     def test_get_capabilities(self):
         # check invalid parameters
-        resp = self.app.get(self.base_url).json
-        self.assertEquals(resp['error'], 1)
-        self.assertEquals(resp['response'], 'No OWS SERVICE specified')
+        resp = self.app.get(self.base_url)
+        self.assertEquals(self._error(resp), 'No OWS SERVICE specified')
 
         service = 'XXX'
         url = '{0}?SERVICE={1}'.format(self.base_url, service)
-        resp = self.app.get(url).json
-        self.assertEquals(resp['error'], 1)
+        resp = self.app.get(url)
         self.assertEquals(
-            resp['response'],
+            self._error(resp),
             'Service {0} is not supported'.format(service))
 
         service = 'WFS'
         url = '{0}?SERVICE={1}'.format(self.base_url, service)
-        resp = self.app.get(url).json
-        self.assertEquals(resp['error'], 1)
-        self.assertEquals(resp['response'], 'ERROR: WFS version was not specified!')
+        resp = self.app.get(url)
+        self.assertEquals(self._error(resp), 'ERROR: WFS version was not specified!')
 
         version = '0.1.0'
         url = '{0}?SERVICE={1}&VERSION={2}'.format(self.base_url, service, version)
-        resp = self.app.get(url).json
-        self.assertEquals(resp['error'], 1)
+        resp = self.app.get(url)
         self.assertEquals(
-            resp['response'],
+            self._error(resp),
             'WFS version {0} is not supported'.format(version))
         version = '1.1.0'
         url = '{0}?SERVICE={1}&VERSION={2}'.format(self.base_url, service, version)
-        resp = self.app.get(url).json
-        self.assertEquals(resp['error'], 1)
-        self.assertEquals(resp['response'], 'Request None is not supported')
+        resp = self.app.get(url)
+        self.assertEquals(self._error(resp), 'Request None is not supported')
 
         request = 'XXX'
         url = '{0}?SERVICE={1}&VERSION={2}&REQUEST={3}'.format(
             self.base_url, service, version, request)
-        resp = self.app.get(url).json
-        self.assertEquals(resp['error'], 1)
-        self.assertEquals(resp['response'], 'Request {0} is not supported'.format(request))
+        resp = self.app.get(url)
+        self.assertEquals(self._error(resp), 'Request {0} is not supported'.format(request))
 
         # successful query, check cobweb:FeatureCollection1
         # is the name of the first FeatureType
@@ -75,13 +73,13 @@ class TestWFS(unittest.TestCase):
             self.base_url)
 
         resp = self.app.get(gf_url)
-        self.assertEquals(resp.text, "Missing 'typeName'")
+        self.assertEquals(self._error(resp), "Missing 'typeName'")
 
         type_name = 'XXX'
         url = '{0}&typename={1}'.format(gf_url, type_name)
         resp = self.app.get(url)
         self.assertEquals(
-            resp.text,
+            self._error(resp),
             'featureType {0} not found in features.json'.format(type_name))
 
         uid = config.get("test", "test_uid")
@@ -133,6 +131,12 @@ class TestWFS(unittest.TestCase):
         url = '{0}?SERVICE=WFS&VERSION=1.1.0&REQUEST=GETCAPABILITIES'.format(
             self.base_url)
         resp = self.app.get(url)
-        namespaces = {'wfs': 'http://www.opengis.net/wfs'}
+
         root = ET.fromstring(resp.text)
-        return root.findall('.//wfs:FeatureType[{0}]/wfs:Name'.format(type_i), namespaces)
+        return root.findall(
+            './/wfs:FeatureType[{0}]/wfs:Name'.format(type_i),
+            self.namespaces)
+
+    def _error(self, resp):
+        root = ET.fromstring(resp.text)
+        return root.findall('./ogc:ServiceException', self.namespaces)[0].text
