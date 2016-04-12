@@ -375,6 +375,8 @@ class PCAPIRest(object):
 
             ######## GET url is a directory -> List Directories ########
             if method=="GET":
+                if not self.provider.exists(path):
+                    return {"msg": "No such file or directory: %s" % self.provider.realpath(path), "error": 1}
                 md = self.provider.metadata(path)
                 if md.is_dir():
                     msg = md.ls()
