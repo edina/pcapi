@@ -60,6 +60,8 @@ def updateIdInGeojson(record):
         if "fieldcontain-" in field["id"]:
             field["id"] = field["id"].replace("fieldcontain-", "")
             field["type"] = field["id"].split("-")[0]
+            if field["type"] == "multiimage":
+                field["type"] = "image"
             record["properties"]["fields"][i] = field
         else:
             return None

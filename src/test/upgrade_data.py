@@ -45,11 +45,11 @@ class TestUpgrade(unittest.TestCase):
         gen = find_json(envsys_records_dir)
         record = json.load(open(gen.next()))
         new_record = updateIdInGeojson(record)
-        #print new_record
+        print new_record
         self.assertEquals(new_record["properties"]["fields"][0]["id"],
             record["properties"]["fields"][0]["id"].replace("fieldcontain-", ""))
         self.assertEquals(new_record["properties"]["fields"][0]["type"],
-            record["properties"]["fields"][0]["id"].split("-")[1])
+            record["properties"]["fields"][0]["id"].split("-")[0])
 
     def test_updateEditorExtension(self):
         """ read geojson and check if editor extension has changed"""
