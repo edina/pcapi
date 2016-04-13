@@ -46,15 +46,17 @@ def updateEditorExtension(record):
     """
     if record["properties"]["editor"].endswith(".edtr"):
         record["properties"]["editor"] = record["properties"]["editor"].replace(".edtr", ".json")
-        return record
-    return None
+    return record
 
-def updateIdInGeojson(record):
+def updateIdExtensionInGeojson(record):
     """
     updates id of each field of the geojson to follow the updated format
+    add a type
+    and update the extension
     """
     if not record.has_key('geometry'):
         return None
+    record = updateEditorExtension(record)
     for i in range(len(record["properties"]["fields"])):
         field = record["properties"]["fields"][i]
         if "fieldcontain-" in field["id"]:
@@ -86,13 +88,6 @@ def upgrade_all_data():
             print "Overwriting new version of %s" % f
             with open(f,'w') as fp:
                 json.dump(new_gj,fp)
-        gj_new_ed_ext = updateEditorExtension(new_gj)
-        if not gj_new_ed_ext:
-            print "Ignoring %s which is already converted." % f
-        else:
-            print "Overwriting new version of %s" % f
-            with open(f,'w') as fp:
-                json.dump(gj_new_ed_ext,fp)
 
 if __name__ == "__main__":
     upgrade_all_data()
