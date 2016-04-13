@@ -40,6 +40,15 @@ def rec2geojson(record):
     res["properties"] = record
     return res
 
+def updateEditorExtension(record):
+    """
+    updates the editor to be from .edtr to .json
+    """
+    if record["properties"]["editor"].endswith(".edtr"):
+        record["properties"]["editor"] = record["properties"]["editor"].replace(".edtr", ".json")
+        return record
+    return None
+
 def updateIdInGeojson(record):
     """
     updates id of each field of the geojson to follow the updated format
@@ -73,6 +82,13 @@ def upgrade_all_data():
             print "Overwriting new version of %s" % f
             with open(f,'w') as fp:
                 json.dump(new_gj,fp)
+        gj_new_ed_ext = updateEditorExtension(new_gj)
+        if not gj_new_ed_ext:
+            print "Ignoring %s which is already converted." % f
+        else:
+            print "Overwriting new version of %s" % f
+            with open(f,'w') as fp:
+                json.dump(gj_new_ed_ext,fp)
 
 if __name__ == "__main__":
     upgrade_all_data()
