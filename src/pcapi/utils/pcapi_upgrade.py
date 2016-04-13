@@ -81,7 +81,7 @@ def upgrade_all_data():
             print "Overwriting new version of %s" % f
             with open(f,'w') as fp:
                 json.dump(gj,fp)
-        new_gj = updateIdInGeojson(j)
+        new_gj = updateIdExtensionInGeojson(j)
         if not new_gj:
             print "Ignoring %s which is already converted." % f
         else:
