@@ -8,7 +8,7 @@ Algorithm:
     - else convert them and replace the old file
 """
 
-import os,json
+import os,json,re
 
 from pcapi import config, logtool
 
@@ -58,7 +58,9 @@ def updateIdInGeojson(record):
     for i in range(len(record["properties"]["fields"])):
         field = record["properties"]["fields"][i]
         if "fieldcontain-" in field["id"]:
-            record["properties"]["fields"][i]["id"] = field["id"].replace("fieldcontain-", "")
+            field["id"] = field["id"].replace("fieldcontain-", "")
+            field["type"] = field["id"].split("-")[0]
+            record["properties"]["fields"][i] = field
         else:
             return None
     return record
