@@ -4,11 +4,11 @@
     "coordinates": [-3.187329203375782, 55.92944573914203]
   },
   "properties": {
-    "editor": "SID1",
+    "editor": "ed1.json",
     "fields": [
       {
         "id": "fieldcontain-textarea-1",
-        "val": "val1",
+        "val": "Testarw",
         "label": "Description"
       }
     ],

@@ -56,6 +56,23 @@ def create_records_cache(provider, path):
         buf.close()
     return ret
 
+def filter_records(provider, filters, userid, params={}):
+    """
+    Filter records.
+
+    @param provider(object): pcapi provider object
+    @param filters(array): array of filter terms
+    @param userid(string): pcapi user identifier
+    @param params(dict): dictionary with lower-case GET/POST parameters
+    @returns filtered output as geojson (or all features when filters==[])
+    """
+
+    records = create_records_cache(provider, "/records")
+    if len(records) > 0:
+        return filter_data(records, filters, userid, params)
+    else:
+        return []
+
 
 def filter_data(records_cache, filters, userid, params={}):
     """Filter records (as returned from records_cache)

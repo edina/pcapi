@@ -131,6 +131,44 @@ class TestAuthoringTool(unittest.TestCase):
         #print len ( resp["records"] )
         self.assertEquals(len ( resp["records"] ) , 2 )
 
+    def test_filter_records(self):
+        #  test record filter
+        url = '/records/{0}/{1}//'.format(provider, userid)
+        app.delete(url).json
+
+        def create_rec(name):
+            with open(os.path.join(
+                config.get('test', 'test_resources'),
+                'record_filter',
+                '{0}.json'.format(name)), 'r') as f:
+                url = '/records/{0}/{1}/{2}'.format(provider, userid, name)
+                resp = app.post(url, params=f.read()).json
+                self.assertEquals(resp["error"], 0)
+
+        create_rec('rec1_ed1')
+        create_rec('rec2_ed1')
+        create_rec('rec3_ed2')
+
+        url = '/records/{0}/{1}/'.format(provider,userid)
+        resp = app.get(url).json
+        self.assertEquals(resp["error"], 0)
+        self.assertEquals(len(resp['records']), 3)
+
+        def check_editor_filter(name, count):
+            resp = app.get(
+                url,
+                params={
+                    'filter': 'editor',
+                    'id': name
+                }
+            ).json
+            self.assertEquals(resp["error"], 0)
+            self.assertEquals(len(resp['records']), count)
+
+        check_editor_filter('xxx', 0)
+        check_editor_filter('ed1.json', 2)
+        check_editor_filter('ed2.json', 1)
+
     def test_get_invalid_records(self):
         url = '/records/{0}/{1}//'.format(provider, userid)
         app.delete(url).json
@@ -202,10 +240,8 @@ class TestAuthoringTool(unittest.TestCase):
 
         url='/editors/{0}/{1}/{2}'.format(provider,userid,SID)
         resp = app.put(url, params=editor).json
-        print `resp`
         url='/editors/{0}/{1}/{2}'.format(provider,userid,SID)
         resp = app.put(url, params=extra_resource).json
-        print `resp`
 
     #@unittest.skip("skipping test")
     def test_public_editors_layers(self):
@@ -217,7 +253,6 @@ class TestAuthoringTool(unittest.TestCase):
         # NOTE: public=true
         url='/features/{0}/{1}/mylayer.kml?public=true'.format(provider,userid)
         resp = app.put(url, params=layer).json
-        print `resp`
         self.assertEquals(resp["error"], 0 )
         ## The same with editor
         editor = editorfile.read()

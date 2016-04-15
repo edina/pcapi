@@ -12,8 +12,9 @@ import zipfile
 from bottle import static_file
 from StringIO import StringIO
 
-from pcapi import ogr, fs_provider, logtool
+from pcapi import ogr, fs_provider, helper, logtool
 from pcapi.exceptions import FsException
+from pcapi.provider import Records
 from pcapi.publish import postgis, geonetwork
 
 log = logtool.getLogger("PCAPIRest", "pcapi")
@@ -65,26 +66,6 @@ class PCAPIRest(object):
         return None # Success!
 
 
-    def create_records_cache(self, path):
-        """ Creates an array of Records classed (s.a.) after parsing all records under `path'.
-        Assumes a valid session """
-
-        # If we are in `/' then get all records
-        for d in self.provider.metadata(path).lsdirs():
-            recpath = "{0}/record.json".format(d)
-            log.debug("Parsing records -- requesting {0}".format(recpath))
-
-            try:
-                buf, meta = self.provider.get_file_and_metadata(recpath)
-                rec = json.loads(buf.read())
-                folder = re.split("/+", recpath)[2]
-                record = Record({folder: rec}, meta)
-                self.rec_cache.append(record)
-            except Exception as e:
-                log.exception("Exception: " + str(e))
-            buf.close()
-
-
     def check_init_folders(self, path):
         log.debug("check %s" % path)
         if path == "editors/" or path == "records/":
@@ -92,37 +73,6 @@ class PCAPIRest(object):
             self.provider.mkdir(path)
             return True
         return False
-
-    def assets(self, provider, userid, path, flt):
-        """
-            Update/Overwrite/Create/Delete/Download records.
-
-        """
-        log.debug('records( %s, %s, %s, %s)' % (provider, userid, path, str(flt)) )
-        error = self.auth(provider,userid)
-        if (error):
-            return error
-
-        if self.request.method == "GET":
-            self.create_records_cache("records/")
-            records_cache = self.filter_data("media", path, userid)
-            if str(flt) == "zip":
-                self.response.headers['Content-Type'] = 'application/zip'
-                self.response.headers['Content-Disposition'] = 'attachment; filename="download.zip"'
-                response_data = None
-                log.debug(type(records_cache))
-                try:
-                    f = open(records_cache, "r")
-                    try:
-                        # Read the entire contents of a file at once.
-                        response_data = f.read()
-                    finally:
-                        f.close()
-                except IOError:
-                    pass
-                return response_data
-            bulk = [ r.content for r in records_cache ]
-            return {"records": bulk, "error": 0 }
 
 
     def records(self, provider, userid, path, flt, ogc_sync):
@@ -189,12 +139,15 @@ class PCAPIRest(object):
                             return res
                         ###
                         return self.fs(provider,userid,path + "/record.json")
-                    ### Process all filters one by one and return the result
+
+                    ### filter records
                     filters = flt.split(",") if flt else []
-                    self.create_records_cache(path)
-                    ### GET / returns all records after applying filters
-                    ### Each filter bellow will remove Records from records_cache
-                    records_cache = self.filter_data(filters, None, userid)
+                    records_cache = Records.filter_records(
+                        fs_provider.FsProvider(userid),
+                        filters,
+                        userid,
+                        helper.httprequest2dict(self.request))
+
                     # "format" implies that records_cache was exported to a format
                     if "format" in filters:
                         return records_cache
@@ -514,93 +467,6 @@ class PCAPIRest(object):
 
         # We can now convert to whatever OGR supports
         return ogr.toPostGIS(data, userid)
-
-    def filter_data(self, filters, path, userid):
-        records_cache = self.rec_cache
-        log.debug("Found %d records" % len(records_cache))
-        if len(filters) > 0:
-            if "editor" in filters:
-                log.debug("filter by editor")
-                ## "editor" filter requires param "id"
-                f_id = self.request.GET.get("id").lower()
-                if not f_id:
-                    return {"msg": 'missing parameter "id"', "error":1}
-                tmp_cache = []
-                for x in records_cache:
-                    for r in x.content.itervalues():
-                        if x.content is not None and r["properties"]["editor"].lower() == f_id:
-                            tmp_cache.append(x)
-                records_cache = tmp_cache
-                #records_cache = [r for r in records_cache.itervalues() if r is not None and r.content["editor"].lower() == f_id]
-                log.debug("found filter by editor")
-            if "date" in filters:
-                ## "date" filter requires at least a "start_date"
-                start_date = self.request.GET.get("start_date")
-                if not start_date:
-                    return {"msg": 'missing parameter "start_date"', "error":1}
-                end_date = self.request.GET.get("end_date")
-                log.debug("filter by dates %s %s" % (start_date, end_date) )
-                try:
-                    # parse the dates to unix epoch format. End time defaults to localtime )
-                    epoch_start =  time.mktime(time.strptime(start_date,"%Y%m%d_%H:%M:%S"))
-                    epoch_end = time.mktime(time.strptime(end_date,"%Y%m%d_%H:%M:%S") \
-                                        if end_date else time.localtime())
-                    log.debug("transformed dates %s %s" % (epoch_start, epoch_end))
-                except ValueError:
-                    return {"msg": "Bad date given. An example date would be 20120327_23:05:12", "error": 1 }
-                records_cache = [ r for r in records_cache if \
-                            r.metadata.mtime() >= epoch_start and r.metadata.mtime() <= epoch_end ]
-                log.debug(len(records_cache))
-            if "envelope" in filters:
-                bbox = self.request.GET.get("bbox")
-                log.debug("filter by bbox %s" % bbox)
-                try:
-                    (xmin, ymin, xmax, ymax) = map(float, bbox.split(","))
-                except AttributeError:
-                    # (None).split() gives AttributeError
-                    return {"msg": 'Parameter "bbox" was not specified', "error":1}
-                except ValueError:
-                    return {"msg": \
-                            "Wrong format. Use bbox=xmin,ymin,xmax,ymax e.g. bbox=-2.2342,33.55,-2.2290,33.56",\
-                            "error":1}
-                # convert to numbers
-                tmp_cache = []
-                for x in records_cache:
-                    for r in x.content.itervalues():
-                        log.debug(r["point"])
-                        try:
-                            lon = float(r["geometry"]["coordinates"][0])
-                            lat = float(r["geometry"]["coordinates"][1])
-                        except ValueError:
-                            return {"msg": "Aborting due to error parsing lat/lon of record %s" \
-                            % r["name"], "error" : 1}
-                        if lon >= xmin and lon <= xmax and lat >= ymin and lat<=ymax:
-                            tmp_cache.append(x)
-                records_cache = tmp_cache
-            if "media" in filters:
-                frmt = self.request.GET.get("frmt")
-                log.debug("filter by media %s" % frmt)
-                if not path:
-                    path = self.request.GET.get("mediatype")
-                log.debug(frmt)
-                if path == "/":
-                    records_cache = self.get_media(records_cache, ["jpg", "jpeg", "wav", "amr", "gpx"], frmt)
-                elif path == "images/":
-                    records_cache = self.get_media(records_cache, ["jpg", "jpeg"], frmt)
-                elif path == "audio/":
-                    records_cache = self.get_media(records_cache, ["wav", "amr"], frmt)
-                elif path == "gpx/":
-                    records_cache = self.get_media(records_cache, ["gpx"], frmt)
-            if "format" in filters:
-                frmt = self.request.GET.get("frmt")
-                log.debug("filter by format %s" % frmt)
-                if frmt == "geojson":
-                    return self.convertToGeoJSON(records_cache, userid)
-                elif frmt == "database":
-                    return self.convertToDatabase(records_cache, userid)
-                else:
-                    return {"error" :1 , "msg" : "unrecognised format: " + `frmt`}
-        return records_cache
 
     def get_media(self, records_cache, exts, frmt):
         """
