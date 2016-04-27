@@ -147,29 +147,35 @@ def getfeature(params):
         return {"error": 1, "response": "WFS GetFeature unsuccessful"}
 
 if __name__ == "__main__":
+    """Quickly test complex feature template without using the web app
+    """
     import sys
-    if (len(sys.argv) != 2):
-        print """USAGE: python wfs.py templatefile """
-        sys.exit(1)
-    TPLFILE = sys.argv[1]
+    import argparse
 
-    # constants
-    ENDPOINT='http://localhost:8080/pcapi/ows'
-    FEATURES={"SID1": {"name": "cobweb:FeatureCollection1",
-                       "title": "First Collection",
-                       "template":"template1.tpl"},
-              "SID2": {"name": "cobweb:FeatureCollection2",
-                       "title": "Second Collection",
-                       "template":"tempalte2.tpl"}}
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-i", "--input", type=argparse.FileType('r'), required=True,
+                    help="path to input GeoJSON file")
+    ap.add_argument("-t", "--template", type=argparse.FileType('r'), required=True,
+                    help="path to template file")
+    ap.add_argument("-d", "--debug", type=int, default=0,
+                    help="debug 0|1")
+    args = vars(ap.parse_args())
+
+    TEMPLATE = args["template"].read()
+    JSON = json.load(args["input"])
+    ENDPOINT = "http://locahost:8080/pcapi/ows?"
 
     # print logs
     def dbg(x):
-        print(x)
+        if args["debug"]:
+            print(x)
     log.debug = dbg
 
-    res = template(open(TPLFILE).read(), OWS_ENDPOINT=ENDPOINT,
-                   WFS_FEATURES=FEATURES)
-    dbg(res)
+    res = template(TEMPLATE, FC=JSON, OWS_ENDPOINT=ENDPOINT,)
+    print res
+
     # validate:
-    # xml = xml.dom.minidom.parseString(res)
-    # dbg(xml.toprettyxml(indent='',newl=''))
+    if args["debug"]:
+        import xml
+        xml = xml.dom.minidom.parseString(res)
+        dbg(xml.toprettyxml(indent='',newl=''))
