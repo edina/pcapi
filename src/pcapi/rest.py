@@ -191,7 +191,7 @@ class PCAPIRest(object):
             s = surveys.get_survey(sid)
             if not s: # no survey found
                 return { "error": 1 , "msg": "User is not registered for syrvey %s" % sid}
-            res = self.fs(provider,s["coordinator"],"/editors/%s.edtr" % sid)
+            res = self.fs(provider,s["coordinator"],"/editors/%s.json" % sid)
             # special case -- portal has survey but coordinator has not created it using Authoring Tool
             #if isinstance(res,dict) and res["msg"].startswith("[Errno 2] No such file or"):
             #    abort(404, "No survey found. Did you create a survey using the Authoring Tool?")
