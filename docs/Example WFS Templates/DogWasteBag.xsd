@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema targetNamespace="http://cobwebproject.eu/GermanDemonstrator"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:wb="http://cobwebproject.eu/GermanDemonstrator"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:gml="http://www.opengis.net/gml/3.2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns="http://www.w3.org/2001/XMLSchema"
+  elementFormDefault="qualified"
+  version="1.00">
+  
+  <annotation>
+    <appinfo>dogwastebag.xsd v1.00 2016-03-23</appinfo>
+    <documentation xml:lang="de">
+      COBWEB Demonstrator Wattenmeer
+    </documentation>
+  </annotation>
+  
+  <!-- import constructs from the GML Feature and Geometry schemas -->
+  <import namespace="http://www.opengis.net/gml/3.2" schemaLocation="http://schemas.opengis.net/gml/3.2.1/gml.xsd"/>
+  <import namespace="http://www.w3.org/1999/xlink" schemaLocation="http://www.w3.org/1999/xlink.xsd"/>
+  
+  <!-- ==============================================================
+    global element declarations
+    =================================================================== -->
+  
+  <element name="WasteBagObservationModel" type="wb:WasteBagObservationModelType" substitutionGroup="gml:AbstractFeatureCollection" />
+  <element name="observationMember" type="wb:ObservationMemberType" substitutionGroup="gml:featureMember"/>
+  <element name="WasteBag" type="wb:WasteBagType" substitutionGroup="wb:AbstractWasteBagFeature"/>
+  
+  <!-- a label for restricting membership in the WasteBagModel collection -->
+  <element name="AbstractWasteBagFeature" type="gml:AbstractFeatureType"
+    abstract="true"
+    substitutionGroup="gml:AbstractFeature"/>
+  
+  <!-- ==============================================================
+    type definitions for city model
+    =================================================================== -->
+  
+  <complexType name="WasteBagObservationModelType">
+    <complexContent>
+      <extension base="gml:AbstractFeatureCollectionType">
+        <sequence>
+          <element name="Erstellt" type="xsd:dateTime" minOccurs="1" maxOccurs="1"/>
+          <element name="Zeitraum">
+            <complexType>
+              <sequence>
+                <element name="Begin" minOccurs="1" maxOccurs="1" type="xsd:dateTime"/>
+                <element name="Ende" minOccurs="1" maxOccurs="1" type="xsd:dateTime"/>
+              </sequence>
+            </complexType>
+          </element>
+          <element name="Survey">
+            <complexType>
+              <attribute ref="xlink:href"/>
+            </complexType>
+          </element>
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  
+  <complexType name="ObservationMemberType">
+    <annotation>
+      <documentation>
+        A observationMember is restricted to those features (or feature
+        collections)that are declared equivalent to ex:AbstractWasteBagFeature.
+      </documentation>
+    </annotation>
+    <complexContent>
+      <restriction base="gml:FeaturePropertyType">
+        <sequence minOccurs="0">
+          <element ref="wb:AbstractWasteBagFeature"/>
+        </sequence>
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+      </restriction>
+    </complexContent>
+  </complexType>
+  
+  <complexType name="WasteBagType">
+    <complexContent>
+      <extension base="gml:AbstractFeatureType">
+        <sequence>
+          <element name="Position" minOccurs="0" maxOccurs="1" type="gml:PointType"/>
+          <element name="Zeitstempel" minOccurs="0" maxOccurs="1" type="xsd:dateTime"/>
+          <element name="Notiz" minOccurs="0" maxOccurs="1" type="xsd:string"/>
+          <element name="Foto">
+            <complexType>
+              <attribute ref="xlink:href"/>
+            </complexType>
+          </element>
+        </sequence>
+      </extension>
+    </complexContent>
+  </complexType>
+  
+</schema>
