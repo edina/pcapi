@@ -75,15 +75,15 @@ def describefeaturetype(params):
     SID = None
     with open(FEATURES_FILE) as f:
         FEATURES = json.load(f)
-        for k in FEATURES:
-            if FEATURES[k]["name"] == TYPENAME:
-                SID=k
+        if TYPENAME in FEATURES:
+            SID=FEATURES[TYPENAME]["sid"]
+            TPL_FILE=FEATURES[TYPENAME]["template"]
 
     if not SID:
         return {"error": 1, "response": "TypeName %s not found in features.json"
                 % TYPENAME}
 
-    XSD_FILE=os.path.join(config.get("path", "ows_template_dir"), SID + ".xsd")
+    XSD_FILE=os.path.join(config.get("path", "ows_template_dir"), TPL_FILE + ".xsd")
 
     try:
         with open(XSD_FILE) as f:
@@ -108,11 +108,12 @@ def getfeature(params):
     OUTPUTFORMAT = params["outputformat"] if "outputformat" in params else "text/xml; subtype=gml/3.1.1"
 
     SID = None
+    TPL_FILE = None
     with open(FEATURES_FILE) as f:
         FEATURES = json.load(f)
-        for k in FEATURES:
-            if FEATURES[k]["name"] == TYPENAME:
-                SID=k
+        if TYPENAME in FEATURES:
+            SID=FEATURES[TYPENAME]["sid"]
+            TPL_FILE=FEATURES[TYPENAME]["template"]
 
     if not SID:
         return {"error": 1, "response": "featureType %s not found in features.json"
@@ -136,7 +137,7 @@ def getfeature(params):
             return {"error": 0, "response": res, "mimetype": "application/json"}
         # If not JSON assume XML and pipe through template
         APPSCHEMA_FILE=os.path.join(config.get("path", "ows_template_dir"),
-                                    SID + ".tpl")
+                                    TPL_FILE)
         if os.path.isfile(APPSCHEMA_FILE):
             with open(APPSCHEMA_FILE) as f:
                 res = template(f.read(), FC=res, OWS_ENDPOINT=ENDPOINT,)
