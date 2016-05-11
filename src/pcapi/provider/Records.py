@@ -51,9 +51,9 @@ def create_records_cache(provider, path):
             folder = re.split("/+", recpath)[2]
             record = Record({folder: rec}, meta)
             ret.append(record)
+            buf.close()
         except Exception as e:
             log.exception("Exception: " + str(e))
-        buf.close()
     return ret
 
 def filter_records(provider, filters, userid, params={}):
