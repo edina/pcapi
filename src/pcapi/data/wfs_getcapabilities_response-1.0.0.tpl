@@ -64,12 +64,12 @@
     <Operations>
       <Query/>
     </Operations>
-    %for SID in WFS_FEATURES:
+    %for TYPENAME in WFS_FEATURES:
     <FeatureType>
-      <Name>{{WFS_FEATURES[SID]["name"]}}</Name>
-      <Title>{{WFS_FEATURES[SID]["title"]}}</Title>
+      <Name>{{TYPENAME}}</Name>
+      <Title>{{WFS_FEATURES[TYPENAME]["title"]}}</Title>
       <Abstract/>
-      <Keywords>COBWEB, {{SID}}</Keywords>
+      <Keywords>COBWEB, {{WFS_FEATURES[TYPENAME]["sid"]}}</Keywords>
       <SRS>EPSG:4326</SRS>
       <LatLongBoundingBox minx="7.83788872494062" miny="51.349933648803" maxx="8.4850505833372" maxy="51.481028227907"/>
     </FeatureType>

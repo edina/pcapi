@@ -1,4 +1,4 @@
 { 
-    "SID1" : {"name": "cobweb:FeatureCollection1", "title": "First Collection"},
-    "SID2" : {"name": "cobweb:FeatureCollection2", "title": "Second Collection"}
+    "cobweb:HT_Protokoll" : {"sid": "DogWasteBag", "title": "Hundetüte Protokoll", "template": "DogWasteBag.tpl"},
+    "cobweb:HT_Protokoll_Flat" : {"sid": "DogWasteBag", "title": "Hundetüte Protokoll (Flat Version)", "template": "DogWasteBag_flat.tpl"}
 }

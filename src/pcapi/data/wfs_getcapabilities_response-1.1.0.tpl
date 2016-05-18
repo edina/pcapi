@@ -97,19 +97,19 @@
     <Operations>
       <Operation>Query</Operation>
     </Operations>
-    %for SID in WFS_FEATURES:
+    %for TYPENAME in WFS_FEATURES:
     <FeatureType xmlns:cobweb="cobweb">
-      <Name>{{WFS_FEATURES[SID]["name"]}}</Name>
-      <Title>{{WFS_FEATURES[SID]["title"]}}</Title>
+      <Name>{{TYPENAME}}</Name>
+      <Title>{{WFS_FEATURES[TYPENAME]["title"]}}</Title>
       <Abstract/>
       <ows:Keywords>
         <ows:Keyword>COBWEB SID</ows:Keyword>
-        <ows:Keyword>{{SID}}</ows:Keyword>
+        <ows:Keyword>{{WFS_FEATURES[TYPENAME]["sid"]}}</ows:Keyword>
       </ows:Keywords>
       <DefaultSRS>urn:x-ogc:def:crs:EPSG:4326</DefaultSRS>
       <ows:WGS84BoundingBox>
-        <ows:LowerCorner>11.74 49.44</ows:LowerCorner>
-        <ows:UpperCorner>13.80 53.46</ows:UpperCorner>
+        <ows:LowerCorner>7.83788872494062 51.349933648803</ows:LowerCorner>
+        <ows:UpperCorner>8.4850505833372 51.481028227907</ows:UpperCorner>
       </ows:WGS84BoundingBox>
     </FeatureType>
     %end

@@ -83,12 +83,14 @@
         <sequence>
           <element name="Position" minOccurs="0" maxOccurs="1" type="gml:PointType"/>
           <element name="Zeitstempel" minOccurs="0" maxOccurs="1" type="xsd:dateTime"/>
-          <element name="Notiz" minOccurs="0" maxOccurs="1" type="xsd:string"/>
+          <element name="Bemerkungen" minOccurs="0" maxOccurs="1" type="xsd:string"/>
+          <element name="Gefüllt" minOccurs="0" maxOccurs="1" type="xsd:string"/>
           <element name="Foto">
             <complexType>
               <attribute ref="xlink:href"/>
             </complexType>
           </element>
+          <element name="UserId" minOccurs="0" maxOccurs="1" type="xsd:string"/>
         </sequence>
       </extension>
     </complexContent>

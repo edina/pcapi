@@ -16,8 +16,12 @@
           <gml:pos>{{FEATURE["geometry"]["coordinates"][0]}} {{FEATURE["geometry"]["coordinates"][1]}}</gml:pos>
       </Position>
       <Zeitstempel>{{FEATURE["properties"]["timestamp"]}}</Zeitstempel>
-      <Notiz>{{[ x["val"] for x in FEATURE["properties"]["fields"] if x["id"] == "textarea-1" ][0]}}</Notiz>
-      <Foto xlink:href="{{OWS_ENDPOINT}}/modified_1454019529641.jpg"/>
+      <Bemerkungen>{{[ x["val"] for x in FEATURE["properties"]["fields"] if x["id"] == "text-1" ][0]}}</Bemerkungen>
+      <Gefüllt>{{[ x["val"] for x in FEATURE["properties"]["fields"] if x["id"] == "radio-1" ][0]}}</Gefüllt>
+      % image = [ x["val"] for x in FEATURE["properties"]["fields"] if x["id"] == "image-1" ][0]
+      % base_url = "https://IMAGE_ENDPOINT/" + FEATURE["name"]
+      <Foto xlink:href="{{base_url}}/{{image}}"/>
+      <UserId>{{FEATURE["properties"]["original_uuid"]}}</UserId>
     </WasteBag>
   </observationMember>
   %end
