@@ -148,11 +148,16 @@ class PCAPIRest(object):
                         userid,
                         helper.httprequest2dict(self.request))
 
-                    # "format" implies that records_cache was exported to a format
-                    if "format" in filters:
+                    if type(records_cache) is list:
+                        # "format" implies that records_cache was exported to a format
+                        if "format" in filters:
+                            return records_cache
+                        bulk = [ r.content for r in records_cache]
+                        return {"records": bulk, "error": 0}
+                    else:
+                        # if filter records doesn't return a list it is an error
+                        # just return the error object
                         return records_cache
-                    bulk = [ r.content for r in records_cache]
-                    return {"records": bulk, "error": 0}
             elif re.findall("/records//?[^/]+/[^/]+$",path):
                 # We have a depth 2 e.g. /records/myrecord/image.jpg. Behave like
                 # normal /fs/ for all METHODS

@@ -3,6 +3,8 @@
 import re, json
 
 from pcapi import logtool
+from pcapi.provider import filter_utils
+
 import time
 
 log = logtool.getLogger("provider", "records")
@@ -143,6 +145,22 @@ def filter_data(records_cache, filters, userid, params={}):
                                 % r["name"], "error": 1}
                     if lon >= xmin and lon <= xmax and lat >= ymin and lat<=ymax:
                         tmp_cache.append(x)
+            records_cache = tmp_cache
+        if "pip" in filters:
+            tmp_cache = []
+            if "poly" in params:
+                try:
+                    poly = json.loads(params['poly'])
+                    for record in records_cache:
+                        geom = record.content.itervalues().next()['geometry']
+                        if geom['type'] == 'Point':
+                            coords = geom['coordinates']
+                            if filter_utils.point_in_poly(coords[0], coords[1], poly):
+                                tmp_cache.append(record)
+                except ValueError as e:
+                    # invalid json
+                    return {"msg": e.message, "error":1}
+
             records_cache = tmp_cache
         if "format" in filters:
             if "frmt" not in params:
