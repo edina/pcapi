@@ -168,7 +168,7 @@ def filter_data(records_cache, filters, userid, params={}):
             frmt = params["frmt"]
             log.debug("filter by format %s" % frmt)
             if frmt == "geojson":
-                return convertToGeoJSON(records_cache, userid)
+                return convertToGeoJSON(records_cache)
             else:
                 return {"error":1, "msg": "unrecognised format: " + repr(frmt)}
     return records_cache
