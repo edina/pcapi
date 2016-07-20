@@ -133,7 +133,10 @@ class FsProvider(object):
         # path should start with `/' otherwise add it!
         path = self._addslash(path)
         #ban special characters after last `/'
-        dirname = helper.strfilter( path[:path.rfind("/")] ,"\\.~" )
+        if "/." in path:
+            log.error ("!!!!! No '/.' is allowed in dirnames !!!")
+            return None
+        dirname = helper.strfilter( path[:path.rfind("/")] ,"\\~" )
         filename = helper.strfilter( path[path.rfind("/"):], "~/" )
         #create dir if it doesn't exist
         realdir = self.realpath(dirname)
@@ -156,7 +159,10 @@ class FsProvider(object):
         """
         path = self._addslash(path)
         #ban special characters for dirname
-        dirname = helper.strfilter( path ,"\\.~" )
+        if "/." in path:
+            log.error ("!!!!! No '/.' is allowed in dirnames !!!")
+            return None
+        dirname = helper.strfilter( path ,"\\~" )
         #create dir if it doesn't exist
         realdir = self.realpath(dirname)
         if not os.path.exists(realdir):
@@ -251,6 +257,8 @@ class FsProvider(object):
                         "bytes" : os.path.getsize(realfpath)\
                     })
             md["contents"] = contents
+        else:
+            log.debug("Not a dir a not a file! Culprit: " + `realpath`)
         return Metadata(md)
 
     def get_file_and_metadata(self, from_path, rev=None):
