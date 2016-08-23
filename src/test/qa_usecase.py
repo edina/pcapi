@@ -73,6 +73,7 @@ class TestQA(unittest.TestCase):
         self._create_rec('rec_pos1')
         self._create_rec('rec_pos2')
         self._create_rec('rec_pos3')
+        self._create_rec('rec_pos4')
 
         # test rangecheck with no max or min
         resp = self.app.get(
