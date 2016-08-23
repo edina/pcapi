@@ -7,8 +7,8 @@
         "editor": "ed1.json",
         "fields": [
             {
-                "id": "fieldcontain-textarea-1",
-                "val": "Testarw",
+                "id": "field-1",
+                "val": "2.1",
                 "label": "Description"
             }
         ],
