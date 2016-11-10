@@ -162,6 +162,21 @@ def filter_data(records_cache, filters, userid, params={}):
                     return {"msg": e.message, "error":1}
 
             records_cache = tmp_cache
+        if "attribute" in filters:
+            # filter on attribute
+            tmp_cache = []
+            if "attribute_name" not in params or "attribute_value" not in params:
+                return {"msg": 'parameters attribute_name and attribute_value must be defined', "error":1}
+            else:
+                attribute_name = params['attribute_name']
+                attribute_value = params['attribute_value']
+
+                for record in records_cache:
+                    for field in record.content.itervalues().next()['properties']['fields']:
+                        if field['id'] == attribute_name and field['val'] == attribute_value:
+                            tmp_cache.append(record)
+
+            records_cache = tmp_cache
         if "rangecheck" in filters:
             tmp_cache = []
             if 'rangecheck_name' in params:

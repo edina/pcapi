@@ -20,6 +20,58 @@ class TestQA(unittest.TestCase):
         cls.REC_PREFIX = '/records/{0}/{1}'.format(provider, userid)
         cls.app = TestApp(application)
 
+    def test_attribute_filter(self):
+        #  test filter on attribute
+        url = '{0}/'.format(self.REC_PREFIX)
+        self.app.delete(url).json
+
+        self._create_rec('rec_pos1')
+        self._create_rec('rec_pos2')
+        self._create_rec('rec_pos3')
+        self._create_rec('rec_pos4')
+        self._create_rec('rec_pos5')
+
+        def check_filter(val, count):
+            resp = self.app.get(
+                url,
+                params={
+                    'filter': 'attribute',
+                    'attribute_name': 'field-1',
+                    'attribute_value': val
+                }).json
+            self.assertEquals(resp["error"], 0)
+            self.assertEquals(len(resp['records']), count)
+
+        check_filter('nonfloat', 2)
+        check_filter('2.1', 1)
+        check_filter('abc', 0)
+
+        # do some error checking
+        ERROR = "parameters attribute_name and attribute_value must be defined"
+        resp = self.app.get(
+            url,
+            params={
+                'filter': 'attribute',
+            }).json
+        self.assertEquals(resp["error"], 1)
+        self.assertEquals(resp['msg'], ERROR)
+        resp = self.app.get(
+            url,
+            params={
+                'filter': 'attribute',
+                'attribute_value': 'field-1'
+            }).json
+        self.assertEquals(resp["error"], 1)
+        self.assertEquals(resp['msg'], ERROR)
+        resp = self.app.get(
+            url,
+            params={
+                'filter': 'attribute',
+                'attribute_field': 'field-1'
+            }).json
+        self.assertEquals(resp["error"], 1)
+        self.assertEquals(resp['msg'], ERROR)
+
     def test_pip_filter(self):
         #  test point in polygon filter
         url = '{0}/'.format(self.REC_PREFIX)
@@ -168,6 +220,36 @@ class TestQA(unittest.TestCase):
         rangecheck_min_max(3, 5, 1)
         rangecheck_min_max(2.1, 4, 2)
         rangecheck_min_max(4, 4, 1)
+
+    def test_combined_pip_and_attribute_filter(self):
+        #  test combined point in polygon and filter on attribute
+        url = '{0}/'.format(self.REC_PREFIX)
+        self.app.delete(url).json
+
+        self._create_rec('rec_pos1')
+        self._create_rec('rec_pos2')
+        self._create_rec('rec_pos3')
+        self._create_rec('rec_pos4')
+        self._create_rec('rec_pos5')
+
+        # will return rec_pos1, rec_pos2 and rec_pos4
+        poly = '[[0,35],[35,35],[35,0],[0,0]]'
+
+        #  will only return rec_pos4 (rec_pos5 outside polygon)
+        resp = self.app.get(
+            url,
+            params={
+                'filter': 'attribute,pip',
+                'poly': poly,
+                'attribute_name': 'field-1',
+                'attribute_value': 'nonfloat'
+            }
+        ).json
+
+        self.assertEquals(resp["error"], 0)
+        records = resp['records']
+        self.assertEquals(len(records), 1)
+        self.assertEquals(records[0].keys()[0], 'rec_pos4')
 
     def test_combined_pip_and_awr_filter(self):
         #  test combined point in polygon and attribute within range filter
