@@ -45,7 +45,7 @@ Directory Tree is organised as follows
 ### Documentation:
 
 under ./docs:
-	All documenation including the current PCAPI REST API specification.
+	All documenation including the current [PCAPI REST API specification](docs/PCAPI_reference.md).
 
 ### Sources:
 
