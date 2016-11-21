@@ -14,6 +14,20 @@ In short, you can install PCAPI globally, locally or within  a virtual environme
 1. `pip install --user git+https://github.com/cobweb-eu/pcapi`
 2. `pcapi`
 
+Alternative Installation with Docker
+------------------------------------
+
+Docker fans can easily install PCAPI directly from the repo. To build the PCAPI container just use:
+
+```bash
+docker build https://github.com/cobweb-eu/pcapi.git:docker -t pcapi
+```
+
+and then you can create a pcapi instance listening on port 8080 using
+```bash
+docker run -p 8080:8080 -d pcapi
+```
+
 Advanced Configuration
 ----------------------
 
@@ -65,7 +79,7 @@ All files are under *~/.pcapi/* (unless overriden by +pcapi.ini+):
 	        Spatialite3 file contained sessions and geo data.
 * `data/<userid>`:
 		Directory containing chroot of user <userid>.
-* `logs/pcapi.log`: 
+* `logs/pcapi.log`:
       		All log outputs as configured in +pcapi.ini+.
 
 License
