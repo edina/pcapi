@@ -17,13 +17,13 @@ In short, you can install PCAPI globally, locally or within  a virtual environme
 Alternative Installation with Docker
 ------------------------------------
 
-Docker fans can easily install PCAPI directly from the repo. To build the PCAPI container just use:
+Docker fans can immediately deploy PCAPI by pointing to the Dockerfile:
 
 ```bash
-docker build https://github.com/cobweb-eu/pcapi.git:docker -t pcapi
+docker build -t pcapi https://raw.githubusercontent.com/cobweb-eu/pcapi/master/docker/Dockerfile
 ```
 
-and then you can create a pcapi instance listening on port 8080 using
+One can then can create a pcapi instance listening on port 8080 using
 ```bash
 docker run -p 8080:8080 -d pcapi
 ```
