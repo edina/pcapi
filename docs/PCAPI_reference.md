@@ -1,3 +1,30 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Personal Cloud API](#personal-cloud-api)
+- [Introduction](#introduction)
+- [API Calls](#api-calls)
+  - [Storage Providers:](#storage-providers)
+    - [Filesystem](#filesystem)
+    - [Delete a file with HTTP DELETE](#delete-a-file-with-http-delete)
+    - [List files in folder](#list-files-in-folder)
+    - [Get (and optionally transform) an individual media asset from a specified folder](#get-and-optionally-transform-an-individual-media-asset-from-a-specified-folder)
+  - [EDITOR/RECORD access](#editorrecord-access)
+    - [Get editors in Folder](#get-editors-in-folder)
+    - [Get all records](#get-all-records)
+    - [Get one record/editor](#get-one-recordeditor)
+      - [for an editor](#for-an-editor)
+      - [for a record:](#for-a-record)
+    - [Create a record with POST](#create-a-record-with-post)
+    - [Upload an editor (aka survey)](#upload-an-editor-aka-survey)
+    - [Delete record](#delete-record)
+    - [Publish record to PostGIS and (optionally) a Geoserver W*S endpoint](#publish-record-to-postgis-and-optionally-a-geoserver-ws-endpoint)
+    - [Synchronize records](#synchronize-records)
+    - [Synchronization example:](#synchronization-example)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Personal Cloud API
 ===================
 
@@ -209,6 +236,17 @@ records based on the following values:
 
 Where:
 
+**attribute**
+
+Filter on attribute. Return list of records that contain an attribute with the specified value. Example:
+
+```
+filter=attribute&attribute_name=description&attribute_value=My%20Survey
+
+All parameters are mandatory.
+
+```
+
 **editor**
 
 Filter based on editor id using the format `filter=editor&id=myeditor.edtr`
@@ -284,6 +322,24 @@ Example Output:
     "error": 0
 }
 ```
+
+**pip**
+
+Point in polygon filter. Return list of records whose point is within the bounds of the specified polygon. Example:
+
+```
+filter=pip&poly=[[0,0], [0,2], [2,2], [2,0]]
+```
+
+**rangecheck**
+
+Attribute within range filter.  Return list of records that contains an attribute value within the defined range. Example:
+
+```
+filter=rangecheck&rangecheck_name=height&rangecheck_min=1&rangecheck_max=2
+```
+
+Mandatory values are `rangecheck_name` and at least on `rangecheck_`.
 
 ### Get one record/editor
 
