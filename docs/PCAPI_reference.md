@@ -243,10 +243,8 @@ Filter on attribute. Return list of records that contain an attribute with the s
 
 ```
 filter=attribute&attribute_name=description&attribute_value=My%20Survey
-
-All parameters are mandatory.
-
 ```
+All parameters are mandatory.
 
 **editor**
 
@@ -340,7 +338,7 @@ Attribute within range filter.  Return list of records that contains an attribut
 filter=rangecheck&rangecheck_name=height&rangecheck_min=1&rangecheck_max=2
 ```
 
-Mandatory values are `rangecheck_name` and at least on `rangecheck_`.
+Mandatory values are `rangecheck_name` and at least one `rangecheck_`.
 
 ### Get one record/editor
 
