@@ -1,0 +1,17 @@
+{
+  "geometry": {
+    "type": "Point",
+    "coordinates": [-3.187329203375782, 55.92944573914203]
+  },
+  "properties": {
+    "editor": "SID1",
+    "fields": [
+      {
+        "id": "fieldcontain-textarea-1",
+        "val": "val1",
+        "label": "Description"
+      }
+    ],
+    "timestamp": "2013-04-25T11:27:30.138Z"
+  }
+}

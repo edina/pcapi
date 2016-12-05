@@ -1,0 +1,4 @@
+{ 
+    "cobweb:HT_Protokoll" : {"sid": "DogWasteBag", "title": "Hundetüte Protokoll", "template": "DogWasteBag.tpl"},
+    "cobweb:HT_Protokoll_Flat" : {"sid": "DogWasteBag", "title": "Hundetüte Protokoll (Flat Version)", "template": "DogWasteBag_flat.tpl"}
+}

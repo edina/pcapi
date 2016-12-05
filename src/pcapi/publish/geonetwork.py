@@ -11,17 +11,13 @@ lock = threading.Lock()
 
 
 class Surveys:
-    # raw surveys resposne from geonetwork
-    _surveys = {}
-    # parsed summary of _surveys as an array of
-    # [ {"sid", "coordinator", "title"} ...
-    _summary = []
-    # number of surveys
-    
     def __init__ (self, surveys):
         """ API to access the contents of the geonetwork response """
-        #store raw surveys
+        # raw surveys resposne from geonetwork
         self._surveys = surveys
+        # parsed summary of _surveys as an array of
+        # [ {"sid", "coordinator", "title"} ...
+        self._summary = []
 
         # create a summary of surveys as an array of [ sid, coordinator uid, title ]
         self.count = int(self._surveys["summary"]["@count"])
@@ -67,9 +63,10 @@ class Surveys:
         }
         """
         # use a dict/set instead of list to prune crazy GN duplicate values(!)
+        
         summary_set = {}
-
-        log.debug("symmary is:")
+        log.debug("Surveys from GeoNetwork are:")
+        log.debug("summary is:")
         log.debug(logtool.pp(self._summary))
         if (self.count == 0):
             return { "msg" : "No surveys found", "error" : 1}

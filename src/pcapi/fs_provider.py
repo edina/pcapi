@@ -67,7 +67,7 @@ class Metadata(object):
         return self.md["path"]
 
     def is_dir(self):
-        return True if self.md["is_dir"] == "true" else False
+        return True if (("is_dir" in self.md) and (self.md["is_dir"] == "true")) else False
 
 
 class FsProvider(object):
@@ -133,7 +133,10 @@ class FsProvider(object):
         # path should start with `/' otherwise add it!
         path = self._addslash(path)
         #ban special characters after last `/'
-        dirname = helper.strfilter( path[:path.rfind("/")] ,"\\.~" )
+        if "/." in path:
+            log.error ("!!!!! No '/.' is allowed in dirnames !!!")
+            return None
+        dirname = helper.strfilter( path[:path.rfind("/")] ,"\\~" )
         filename = helper.strfilter( path[path.rfind("/"):], "~/" )
         #create dir if it doesn't exist
         realdir = self.realpath(dirname)
@@ -156,7 +159,10 @@ class FsProvider(object):
         """
         path = self._addslash(path)
         #ban special characters for dirname
-        dirname = helper.strfilter( path ,"\\.~" )
+        if "/." in path:
+            log.error ("!!!!! No '/.' is allowed in dirnames !!!")
+            return None
+        dirname = helper.strfilter( path ,"\\~" )
         #create dir if it doesn't exist
         realdir = self.realpath(dirname)
         if not os.path.exists(realdir):
@@ -223,13 +229,13 @@ class FsProvider(object):
 
         realpath = self.realpath(path)
         md = {}
-        if( not os.path.isdir(realpath) ):
+        if os.path.isfile(realpath):
             # It is a file
             md["path"] = path
             md["is_dir"] = "false"
             md["modified"] = os.path.getmtime(realpath) #in epoch seconds
             md["bytes"] = os.path.getsize(realpath)
-        else:
+        elif os.path.isdir(realpath):
             #It is a directory.
             # List files but DON'T just recurse because we only want depth level 1.
             md["path"] = path
@@ -251,6 +257,8 @@ class FsProvider(object):
                         "bytes" : os.path.getsize(realfpath)\
                     })
             md["contents"] = contents
+        else:
+            log.debug("Not a dir a not a file! Culprit: " + `realpath`)
         return Metadata(md)
 
     def get_file_and_metadata(self, from_path, rev=None):

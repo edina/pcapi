@@ -19,22 +19,24 @@ home = os.path.expanduser("~")
 config.add_section('path')
 config.set('path', 'home', home)
 
+
 def get(section, key):
     return config.get(section, key)
+
+
 def getboolean(section, key):
     return config.getboolean(section, key)
 def has_option(section, option):
     return config.has_option(section, option)
 
 def getCCMap():
-    ccmap = {
-             "Default" : "",
+    ccmap = {"Default": "",
              "Zero":"http://creativecommons.org/publicdomain/zero/1.0/",
              "CC-BY":"http://creativecommons.org/licenses/by/3.0",
              "CC-SA":"http://creativecommons.org/licenses/by-sa/3.0",
              "BY-NC-CA":"http://creativecommons.org/licenses/by-nc/3.0",
              "BY-NC-DC":"http://creativecommons.org/licenses/by-nc-nd/3.0"
-    }
+             }
     return ccmap
 
 
@@ -84,3 +86,18 @@ data_path = config.get("path", "data_dir")
 if not os.path.exists(data_path):
     print 'Creating data directory: {0}'.format(data_path)
     os.makedirs(data_path)
+
+# Create OWS template file (normally under .pcapi/data/ows)
+ows_tpl_path = config.get("path", "ows_template_dir")
+if not os.path.exists(ows_tpl_path):
+    print 'Creating data directory: {0}'.format(ows_tpl_path)
+    os.makedirs(ows_tpl_path)
+# copy ows templates from ~/.local/.../data/ to ~/.pcapi/...
+ows_files = ['features.json', 'wfs_getcapabilities_response-1.0.0.tpl',
+             'wfs_getcapabilities_response-1.1.0.tpl']
+for f in ows_files:
+    ows_file_path = os.path.join(ows_tpl_path,f)
+    if not os.path.exists(ows_file_path):
+        print 'Creating default %s' % ows_file_path
+        default_features_file = resource_filename(__name__, 'data/{0}'.format(f))
+        shutil.copyfile(default_features_file, ows_file_path)

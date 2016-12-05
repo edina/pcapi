@@ -1,4 +1,4 @@
-Personal Cloud API
+Personal Cloud API [![Build Status](https://travis-ci.org/cobweb-eu/pcapi.svg?branch=master)](https://travis-ci.org/cobweb-eu/pcapi)
 ==================
 
 PCAPI is a **storage middleware** that abstracts access to Cloud Storage providers in addition to its own local storage. Authentication to external providers like e.g. Dropbox is based on oAuth.
@@ -13,6 +13,20 @@ In short, you can install PCAPI globally, locally or within  a virtual environme
 
 1. `pip install --user git+https://github.com/cobweb-eu/pcapi`
 2. `pcapi`
+
+Alternative Installation with Docker
+------------------------------------
+
+Docker fans can immediately deploy PCAPI by pointing to the Dockerfile:
+
+```bash
+docker build -t pcapi https://raw.githubusercontent.com/cobweb-eu/pcapi/master/docker/Dockerfile
+```
+
+One can then can create a pcapi instance listening on port 8080 using
+```bash
+docker run -p 8080:8080 -d pcapi
+```
 
 Advanced Configuration
 ----------------------
@@ -45,7 +59,7 @@ Directory Tree is organised as follows
 ### Documentation:
 
 under ./docs:
-	All documenation including the current PCAPI REST API specification.
+	All documenation including the current [PCAPI REST API specification](docs/PCAPI_reference.md).
 
 ### Sources:
 
@@ -65,7 +79,7 @@ All files are under *~/.pcapi/* (unless overriden by +pcapi.ini+):
 	        Spatialite3 file contained sessions and geo data.
 * `data/<userid>`:
 		Directory containing chroot of user <userid>.
-* `logs/pcapi.log`: 
+* `logs/pcapi.log`:
       		All log outputs as configured in +pcapi.ini+.
 
 License

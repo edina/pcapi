@@ -8,6 +8,7 @@ Local provider has no oauth implementation yet. User will just need to:
 2. PUT/POST before "reading" anything. No user directory is created unless
    something is uploaded.
 """
+import base64
 import os
 import sys
 import unittest
@@ -65,30 +66,35 @@ class TestAuthoringTool(unittest.TestCase):
         /sync/local/testemail@domain.com/123456789
 
     Post mbtiles/kml (POST):
-        /layers/local/testemail@domain.com/dyfi.mbtiles
+        /features/local/testemail@domain.com/dyfi.mbtiles
     """
     ########### GET EDITORS ###########
 
-    #@unittest.skip("skipping setup")
     def test_post_editor(self):
         """  post an editor """
-        url='/fs/{0}/{1}/editors/test.edtr'.format(provider,userid)
-        editor = editorfile.read() 
-        resp = app.post(url, params=editor).json
-        self.assertEquals(resp["error"], 0 )
-        # Contents of /editors/ should be the "/editors/test.edtr" (always receives absolute paths)
+
+        url='/fs/{0}/{1}/editors/test.json'.format(provider,userid)
+        editor = editorfile.read()
+        with open (os.path.join(config.get("test", "test_resources"), 'form.json'), "r") as f:
+            resp = app.post(url, params=f.read()).json
+            self.assertEquals(resp["error"], 0 )
+        # Contents of /editors/ should be the "/editors/test.json" (always receives absolute paths)
         resp = app.get('/fs/{0}/{1}/editors'.format(provider,userid) ).json
         #print `resp`
-        self.assertTrue("/editors/test.edtr" in resp["metadata"])
+        self.assertTrue("/editors/test.json" in resp["metadata"])
 
 
     def test_get_all_editors(self):
         """  Get all Editors """
+        self.test_post_editor() #prereq
         url='/editors/{0}/{1}/'.format(provider,userid)
         resp = app.get(url).json
         self.assertEquals(resp["error"], 0 )
-        self.assertTrue("test.edtr" in resp["metadata"])
-        self.assertTrue("My Survey Title" in resp["names"])
+        try:
+            self.assertTrue("test.json" in resp["metadata"])
+            self.assertTrue("test-form" in resp["names"])
+        except:
+            print "Assertion failed. Got: %s" % `resp`
     ########### GET RECORDS ###########
 
     def test_post_record(self):
@@ -124,6 +130,61 @@ class TestAuthoringTool(unittest.TestCase):
         self.assertEquals(resp["error"], 0)
         #print len ( resp["records"] )
         self.assertEquals(len ( resp["records"] ) , 2 )
+
+    def test_filter_records(self):
+        #  test record filter
+        url = '/records/{0}/{1}//'.format(provider, userid)
+        app.delete(url).json
+
+        def create_rec(name):
+            with open(os.path.join(
+                config.get('test', 'test_resources'),
+                'record_filter',
+                '{0}.json'.format(name)), 'r') as f:
+                url = '/records/{0}/{1}/{2}'.format(provider, userid, name)
+                resp = app.post(url, params=f.read()).json
+                self.assertEquals(resp["error"], 0)
+
+        create_rec('rec1_ed1')
+        create_rec('rec2_ed1')
+        create_rec('rec3_ed2')
+
+        url = '/records/{0}/{1}/'.format(provider,userid)
+        resp = app.get(url).json
+        self.assertEquals(resp["error"], 0)
+        self.assertEquals(len(resp['records']), 3)
+
+        def check_editor_filter(name, count):
+            resp = app.get(
+                url,
+                params={
+                    'filter': 'editor',
+                    'id': name
+                }
+            ).json
+            self.assertEquals(resp["error"], 0)
+            self.assertEquals(len(resp['records']), count)
+
+        check_editor_filter('xxx', 0)
+        check_editor_filter('ed1.json', 2)
+        check_editor_filter('ed2.json', 1)
+
+    def test_get_invalid_records(self):
+        url = '/records/{0}/{1}//'.format(provider, userid)
+        app.delete(url).json
+
+        # post invalid record
+        url = '/records/{0}/{1}/myrecord'.format(provider, userid)
+        with open (os.path.join(config.get("test", "test_resources"), 'invalid.rec'), "r") as f:
+            resp = app.post(url, params=f.read()).json
+            self.assertEquals(resp["error"], 0 )
+
+        url = '/records/{0}/{1}/'.format(provider, userid)
+        resp = app.get(url).json
+
+        # get all returns 0 but no error
+        self.assertEquals(len(resp["records"]), 0)
+        self.assertEquals(resp["error"], 0)
 
     #### FILES ####
 
@@ -166,20 +227,70 @@ class TestAuthoringTool(unittest.TestCase):
         diff_resp = app.get(url).json
         self.assertEquals( diff_resp["updated"] , [u'/records/myrecord/record.json'] )
 
-    #@unittest.skip("skipping setup")
+    @unittest.skip("WIP test_public_editors_layers")
+    def test_editors_interface(self):
+        """ This is to test the new /editors/ -> /fs/ schema as described in
+        https://github.com/cobweb-eu/cobweb/issues/166
+        """
+        # Post editor
+        ## /editors/local/UUID/SID/XXX -> /SID/records/NAME/record.json
+        editor = editorfile.read()
+        SID = "BADBEEF"
+        extra_resource = localfile.read() #eg an image or Decision Tree
+
+        url='/editors/{0}/{1}/{2}'.format(provider,userid,SID)
+        resp = app.put(url, params=editor).json
+        url='/editors/{0}/{1}/{2}'.format(provider,userid,SID)
+        resp = app.put(url, params=extra_resource).json
+
+    #@unittest.skip("skipping test")
     def test_public_editors_layers(self):
         """  Put an overlay and an editor with public=true and see if they are copied
         over to the public folder"""
-        
+
         # create public layer mylayer.
         layer = localfile.read()
         # NOTE: public=true
-        url='/layers/{0}/{1}/mylayer.kml?public=true'.format(provider,userid)
+        url='/features/{0}/{1}/mylayer.kml?public=true'.format(provider,userid)
         resp = app.put(url, params=layer).json
-        print `resp`
         self.assertEquals(resp["error"], 0 )
         ## The same with editor
         editor = editorfile.read()
         # NOTE: public=true
         url='/editors/{0}/{1}/mylayer.kml?public=true'.format(provider,userid)
         resp = app.put(url, params=editor).json
+
+
+class TestMobileApp(unittest.TestCase):
+    def test_image_upload(self):
+        url = '/records/{0}/{1}//'.format(provider, userid)
+        app.delete(url).json
+
+        # create new record
+        rname = 'myrecord'
+        url = '/records/{0}/{1}/{2}'.format(provider, userid, rname)
+        resp = app.post(url, params=localfile.read()).json
+        self.assertEquals(resp['error'], 0)
+
+        # post binary image
+        bfname = 'image.jpg'
+        resp = app.post('{0}/{1}'.format(url, bfname),
+                        upload_files=[('file' , imagefilepath)] ).json
+        self.assertEquals(resp['error'], 0)
+        self.assertEquals(resp['msg'], 'File uploaded')
+        self.assertEquals(resp['path'], '/records/{0}/{1}'.format(rname, bfname))
+
+        # post base64 string (based on encoding of test image)
+        sfname = 'imageb64.jpg'
+        with open(imagefilepath, 'r') as f:
+            out = base64.b64encode(f.read())
+            resp = app.post('{0}/{1}?base64=true'.format(url, sfname), params=out).json
+            self.assertEquals(resp['error'], 0)
+            self.assertEquals(resp['msg'], 'File uploaded')
+            self.assertEquals(resp['path'], '/records/{0}/{1}'.format(rname, sfname))
+
+        # verify both files have same size
+        d = os.path.join(config.get("path", 'data_dir'), userid, 'records', rname)
+        self.assertEquals(
+            os.stat(os.path.join(d, bfname)).st_size,
+            os.stat(os.path.join(d, sfname)).st_size)

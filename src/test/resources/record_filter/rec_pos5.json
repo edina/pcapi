@@ -1,0 +1,17 @@
+{
+    "geometry": {
+        "type": "Point",
+        "coordinates": [-30.0, 30.0]
+    },
+    "properties": {
+        "editor": "ed1.json",
+        "fields": [
+            {
+                "id": "field-1",
+                "val": "nonfloat",
+                "label": "Description"
+            }
+        ],
+        "timestamp": "2016-01-01T10:00:00.000Z"
+    }
+}
