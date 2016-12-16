@@ -4,7 +4,7 @@ We openly welcome all contributions (bug reports, bug fixes, new features etc.).
 
 ## Licensing
 
-Contributors are asked to confirm that they comply with project [license](https://github.com/cobweb-eu/pcapi/blob/master/LICENSE) guidelines when making a pull request.
+Contributors are asked to confirm that they comply with project [license](https://github.com/edina/pcapi/blob/master/LICENSE) guidelines when making a pull request.
 
 ## GitHub Pull Requests
 
@@ -18,4 +18,4 @@ More details on how this is done are available on [Github](https://help.github.c
 
 ## Bugs and feature requests
 
-All bugs and feature requests are tracked using Github's [issue tracker](https://github.com/cobweb-eu/pcapi/issues)
+All bugs and feature requests are tracked using Github's [issue tracker](https://github.com/edina/pcapi/issues)
